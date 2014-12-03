@@ -21,12 +21,20 @@ class OrganBone{
 	private static $_multi_bone_map;      //多通道 DListID 对应关系
 
     public static function init(){
-		require dirname(__FILE__)."/../templates/bone.tpl.php";
-	    //self::$_index = 1;
-		self::$_bone_model_index       = $bone_model_index;
-		self::$_bone_model_index_multi = $bone_model_index_multi;
-		self::$_bone_model_repo        = $bone_model_repo;
-		self::$_bone_multi_max_size    = $bone_multi_max_size;
+        $cf = @file_get_contents(dirname(__FILE__)."/../templates/bone.tpl");
+        if ($cf == false){
+			GeneralFunc::LogInsert('fail to open bone templates file: '.dirname(__FILE__)."/../templates/bone.tpl",WARNING);
+		}else{
+			$tmp = unserialize($cf);//反序列化，并赋值  
+			if (BONE_TPL_VER !== $tmp['version']){
+			    GeneralFunc::LogInsert('unmatch bone template version: ('.BONE_TPL_VER.' !== '.$tmp['version'].') '.dirname(__FILE__)."/../templates/bone.tpl",WARNING);
+			}else{
+				self::$_bone_model_index       = $tmp['index'];
+				self::$_bone_model_index_multi = $tmp['m_index'];
+				self::$_bone_model_repo        = $tmp['repo'];
+				self::$_bone_multi_max_size    = $tmp['m_max_size'];
+			}
+		}
 	}
 
 	//清除指定 usable中 影响 ipsp的单位 (根据 双向链表 索引 开始 -> 结束 )

@@ -14,9 +14,18 @@ class OrganPoly{
 
     /////////////////////////////////////////////
 	public static function init(){
-	    require dirname(__FILE__)."/../templates/poly.tpl.php";
-        self::$_poly_model_index = $poly_model_index;
-		self::$_poly_model_repo  = $poly_model_repo;
+		$cf = @file_get_contents(dirname(__FILE__)."/../templates/poly.tpl");
+        if ($cf == false){
+			GeneralFunc::LogInsert('fail to open poly templates file: '.dirname(__FILE__)."/../templates/poly.tpl",WARNING);
+		}else{
+			$tmp = unserialize($cf);//反序列化，并赋值  
+			if (POLY_TPL_VER !== $tmp['version']){
+			    GeneralFunc::LogInsert('unmatch poly template version: ('.POLY_TPL_VER.' !== '.$tmp['version'].') '.dirname(__FILE__)."/../templates/poly.tpl",WARNING);
+			}else{
+			    self::$_poly_model_index = $tmp['index'];
+				self::$_poly_model_repo  = $tmp['repo'];
+			}
+		}
 	}
 
 	

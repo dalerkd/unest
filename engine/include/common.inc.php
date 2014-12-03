@@ -23,6 +23,12 @@ define('BONE_TPL_VER',1);
 define('POLY_TPL_VER',1);
 
 //////////////////////////////////////////
+//log level
+define ('ERROR'   ,1);
+define ('WARNING' ,2);
+define ('NOTICE'  ,3);
+
+//////////////////////////////////////////
 //character types
   define ('CTPL_OPT',1); //指令 
 //define ('CTPL_POS',2); //位置 (如：前中后)
