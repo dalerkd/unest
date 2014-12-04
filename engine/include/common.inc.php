@@ -21,6 +21,10 @@ define ('ENGIN_VER',6);
 define('MEAT_TPL_VER',1);
 define('BONE_TPL_VER',1);
 define('POLY_TPL_VER',1);
+//////////////////////////////////////////
+//organ 常数定义
+define ('BONE_MULTI_MAX_SIZE', 50);// 多通道 骨架 最大包含单位 (指令条数)
+define ('MEAT_MAX_SINGLE_UNIT',50);// 单插入meat最大指令条数 (见 /readme/readme.meat.txt)
 
 //////////////////////////////////////////
 //log level

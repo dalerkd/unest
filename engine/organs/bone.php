@@ -12,7 +12,7 @@ class OrganBone{
 	private static $_bone_model_index;
 	private static $_bone_model_index_multi;
 
-    private static $_bone_multi_max_size;
+    private static $_bone_multi_max_size = BONE_MULTI_MAX_SIZE;
 
 	private static $_delay_remove;    //待删除(原始label 多通道后)
 
@@ -31,8 +31,7 @@ class OrganBone{
 			}else{
 				self::$_bone_model_index       = $tmp['index'];
 				self::$_bone_model_index_multi = $tmp['m_index'];
-				self::$_bone_model_repo        = $tmp['repo'];
-				self::$_bone_multi_max_size    = $tmp['m_max_size'];
+				self::$_bone_model_repo        = $tmp['repo'];				
 			}
 		}
 	}
@@ -661,7 +660,6 @@ class OrganBone{
 		self::$_bone_units           = array();
 		self::$_multi_bone_unit_rate = array();
 		self::$_multi_bone_map       = array();
-
 
 		if (count($bone_obj) <= self::$_bone_multi_max_size){
 			$c_bone_model_index = self::$_bone_model_index_multi;
