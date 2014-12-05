@@ -396,7 +396,9 @@ class OrganBone{
 		//var_dump ($copy);
 		//var_dump ($c_bone);
 		//var_dump ($soul_position);
-		echo "<br>*****************************************<br>";
+		if (defined('DEBUG_ECHO') && defined('BONE_DEBUG_ECHO')){
+			echo "<br>*****************************************<br>";
+		}
 		//修改 链表，把骨架加入进去
 
 		$c_bone_list_start = ConstructionDlinkedListOpt::getDlinkedListIndex();
@@ -627,7 +629,7 @@ class OrganBone{
 				}
 			}
 		}
-		if (defined('DEBUG_ECHO')){
+		if (defined('DEBUG_ECHO') && defined('BONE_DEBUG_ECHO')){
 			DebugShowFunc::my_shower_05 ($c_bone_model,$bone_obj,$stack_unusable,$ret,$conflict_position);
 		}
 		return $ret;
@@ -677,7 +679,9 @@ class OrganBone{
 		
 		$x = array_rand($c_bone_model_index);
 		$z = $c_bone_model_index[$x];
-		echo "<br> bone repo index: $z ";
+		if (defined('DEBUG_ECHO') && defined('BONE_DEBUG_ECHO')){
+			echo "<br> bone repo index: $z ";
+		}
 		//$z = 2; //测试 多通道，强制指定
 		if ($z){
 			if (self::collect_usable_bone_model ($bone_obj,$last_ipsp,self::$_bone_model_repo[$z])){ //骨架出错,代表 骨架模块 有问题	

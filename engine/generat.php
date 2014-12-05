@@ -53,6 +53,36 @@ if (!GeneralFunc::LogHasErr()){
 
 	if (CfgParser::params('echo')){
 		require_once dirname(__FILE__)."/library/debug_show.func.php";
+
+		$a = CfgParser::params('echo');
+		if (is_array($a)){
+			//////////////////////////////////////////
+			//organ debug echo
+			if (isset($a['all'])){
+				define (BONE_DEBUG_ECHO,true);
+				define (MEAT_DEBUG_ECHO,true);
+				define (POLY_DEBUG_ECHO,true);
+				define (SEC_DEBUG_ECHO ,true);
+				echo "<br><font color=blue><b>* ALL_DEBUG_ECHO</b></font>";
+			}else{
+				if (isset($a['bone_echo'])){
+					define (BONE_DEBUG_ECHO,true);
+					echo "<br><font color=blue><b>* BONE_DEBUG_ECHO</b></font>";
+				}
+				if (isset($a['meat_echo'])){
+					define (MEAT_DEBUG_ECHO,true);
+					echo "<br><font color=blue><b>* MEAT_DEBUG_ECHO</b></font>";
+				}
+				if (isset($a['poly_echo'])){
+					define (POLY_DEBUG_ECHO,true);
+					echo "<br><font color=blue><b>* POLY_DEBUG_ECHO</b></font>";
+				}
+				if (isset($a['sec_echo'])){
+					define (SEC_DEBUG_ECHO,true);
+					echo "<br><font color=blue><b>* SEC_DEBUG_ECHO</b></font>";
+				}
+			}
+		}
 	}
 	set_time_limit(CfgParser::params('timelimit'));	
 
@@ -148,7 +178,7 @@ if (!GeneralFunc::LogHasErr()){
 	//exit;
 	CfgParser::reconfigure_soul_usable ($sec_name,$soul_writein_Dlinked_List_Total,$soul_usable,$soul_forbid); //usable
 
-	if (defined('DEBUG_ECHO')){
+	if (defined('DEBUG_ECHO') and defined('SEC_DEBUG_ECHO')){
 		DebugShowFunc::my_shower_01($CodeSectionArray,$StandardAsmResultArray,$exec_thread_list);
 	}		
 
@@ -266,9 +296,9 @@ foreach ($CodeSectionArray as $sec => $body){
 		
 		$organ_process = OrgansOperator::GenOrganProcess(CfgParser::GetStrength($sec),count($soul_writein_Dlinked_List_Total[$sec]['list']),CfgParser::params('maxstrength'));
 		
-		if (defined('DEBUG_ECHO')){
-			var_dump ($organ_process);
-		}
+		//if (defined('DEBUG_ECHO')){
+		//	var_dump ($organ_process);
+		//}
 
 		if (0 == count($organ_process)){ //无任何处理
 			GeneralFunc::LogInsert($language['section_name'].$body['name'].$language['section_number']."$sec ".$language['section_without_garble'],2);			

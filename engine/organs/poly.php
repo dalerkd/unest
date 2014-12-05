@@ -757,7 +757,7 @@ class OrganPoly{
 
 			self::$_index ++;
 
-			if (defined('DEBUG_ECHO')){
+			if (defined('DEBUG_ECHO') && defined ('POLY_DEBUG_ECHO')){
 				DebugShowFunc::my_shower_03($obj,$insert_List_index,$c_poly_result);
 			}
 		}	
