@@ -65,19 +65,19 @@ if (!GeneralFunc::LogHasErr()){
 				define (SEC_DEBUG_ECHO ,true);
 				echo "<br><font color=blue><b>* ALL_DEBUG_ECHO</b></font>";
 			}else{
-				if (isset($a['bone_echo'])){
+				if (isset($a['bone'])){
 					define (BONE_DEBUG_ECHO,true);
 					echo "<br><font color=blue><b>* BONE_DEBUG_ECHO</b></font>";
 				}
-				if (isset($a['meat_echo'])){
+				if (isset($a['meat'])){
 					define (MEAT_DEBUG_ECHO,true);
 					echo "<br><font color=blue><b>* MEAT_DEBUG_ECHO</b></font>";
 				}
-				if (isset($a['poly_echo'])){
+				if (isset($a['poly'])){
 					define (POLY_DEBUG_ECHO,true);
 					echo "<br><font color=blue><b>* POLY_DEBUG_ECHO</b></font>";
 				}
-				if (isset($a['sec_echo'])){
+				if (isset($a['sec'])){
 					define (SEC_DEBUG_ECHO,true);
 					echo "<br><font color=blue><b>* SEC_DEBUG_ECHO</b></font>";
 				}
