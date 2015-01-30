@@ -6,7 +6,7 @@ if(!defined('UNEST.ORG')) {
 
 //主 链表 及 相关 结构 操作 类
 
-define (MIN_REL_JMP_RANGE_RESERVE,5); //rel_jmp range 极限保留字节数 (小于此数,所有单位character.Rate清除)
+define ('MIN_REL_JMP_RANGE_RESERVE',5); //rel_jmp range 极限保留字节数 (小于此数,所有单位character.Rate清除)
 
 class ConstructionDlinkedListOpt{
     //链表记录
@@ -163,10 +163,7 @@ class ConstructionDlinkedListOpt{
 	public static function issetRelJmpPointer($unit){
 	    return isset(self::$_c_rel_jmp_pointer[$unit]);
 	}
-
-
-	 ////////////////////////////////////////////////////////////////////////////////////////////	
-	//读取指定unit 的 $_c_rel_jmp_range; 值
+	// 读取指定unit 的 $_c_rel_jmp_range; 值
 	public static function readRelJmpRange($unit=false,$key=false){
 		if (false === $unit){
 			return self::$_c_rel_jmp_range;    
@@ -247,12 +244,11 @@ class ConstructionDlinkedListOpt{
 		}		
 		return false;		
 	}
-
-	////////////////////////////////////////////////////////////////////////////////////////////
 	//链条表 首单位 操作 (设置 and 读取)
 	public static function readListFirstUnit(){
 	    return self::$_soul_writein_Dlinked_List_start;
 	}
+	// 
 	public static function setListFirstUnit(){
 	    self::$_soul_writein_Dlinked_List_start = self::$_s_w_Dlinked_List_index;
 	}
@@ -269,12 +265,10 @@ class ConstructionDlinkedListOpt{
 	public static function incDlinkedListIndex(){
 	    self::$_s_w_Dlinked_List_index ++;
 	}
-
     //判断链表单位是否有效
 	public static function issetDlinkedListUnit($key,$skey){
 	    return (isset(self::$_soul_writein_Dlinked_List[$key][$skey]));
 	}
-
 	//双向链表 总 单位个数
 	public static function numDlinkedList(){
 	    return count(self::$_soul_writein_Dlinked_List);
@@ -291,7 +285,7 @@ class ConstructionDlinkedListOpt{
 			unset (self::$_soul_writein_Dlinked_List[self::$_s_w_Dlinked_List_index]);
 		}
 	}
-
+	// 
     public static function insertDlinkedListByIndex($prev){
 	    self::insertDlinkedList($prev,self::$_s_w_Dlinked_List_index);
 	}
@@ -311,7 +305,7 @@ class ConstructionDlinkedListOpt{
 			self::$_soul_writein_Dlinked_List[$arg[1]][$arg[2]] = $arg[0];	
 		}
 	}
-	//链表读取
+	// 链表读取
 	public static function getDlinkedListTotal(){
 	    return self::$_soul_writein_Dlinked_List;
 	}
@@ -327,13 +321,11 @@ class ConstructionDlinkedListOpt{
 		    return self::$_soul_writein_Dlinked_List[$arg[0]][$arg[1]][$arg[2]];
 		}
 	}
-
 	////////////////////////////////////////////////////////////////////////////
 	//根据 $soul_writein_Dlinked_List 链表号 获得 该单位的 前(后)usable 数组
 	public static function get_usable_from_DlinkedList($id,$position){
         return OrgansOperator::GetByDListUnit(self::$_soul_writein_Dlinked_List[$id],USABLE,$position);
-	}
-	
+	}	
 	//////////////////////////////////////////////////////////////////////////
 	//摘除 双向 链表 中的 指定单位 (对照 OrganBone::remove_from_DlinkedList)
 	public static function remove_from_DlinkedList($c_lp){
@@ -365,8 +357,7 @@ class ConstructionDlinkedListOpt{
 		}elseif (false !== $next){ //if Prev == false
 			self::$_soul_writein_Dlinked_List_start = $next;
 		}//elseif (false !== $prev){ //if Next == false 最后一个，直接清除即可
-	}
-    
+	}    
 	//////////////////////////////////////////////////////////////////////////////
 	//
 	// 根据 链表号 获得指令名 (Label 返回 下一个(按方向))
@@ -391,7 +382,6 @@ class ConstructionDlinkedListOpt{
 		
 		return $ret;
 	}
-
     //获取 链表单位 代码
 	public static function getCode_from_DlinkedList($unit){
 
@@ -403,8 +393,6 @@ class ConstructionDlinkedListOpt{
 		}
 		return $ret;
 	}
-
-
     //根据链表编号获取单位[CODE] and [USABLE]
 	//需要仅对应当前$sec的全局变量 $soul_writein_Dlinked_List / $c_Asm_Result / $c_soul_usable / $meat_result_array / $bone_result_array / $poly_result_array;
 	public static function get_unit_by_soul_writein_Dlinked_List($n){
@@ -420,7 +408,6 @@ class ConstructionDlinkedListOpt{
 		return $ret;
 
 	}
-
     //判断是否为原始代码
 	private static function is_soul_unit($array){
 
@@ -434,8 +421,28 @@ class ConstructionDlinkedListOpt{
 
 		return false;
 	}
-
-
+	// 创建一个新的链表单位(内容为$array)并追加到指定链表单位($prev)的后面(作为首单位则设为false),返回新的单位序号
+	public static function appendNewUnit($prev,$array){
+		$c_id = self::$_s_w_Dlinked_List_index;
+		self::$_s_w_Dlinked_List_index ++;
+		self::$_soul_writein_Dlinked_List[$c_id] = $array;
+		$next = false;
+		if (false === $prev){
+			$next = self::$_soul_writein_Dlinked_List_start;
+			self::$_soul_writein_Dlinked_List_start = $c_id;	
+		}else{		
+			if (isset(self::$_soul_writein_Dlinked_List[$prev][N])){
+				$next = self::$_soul_writein_Dlinked_List[$prev][N];
+			}				
+			self::$_soul_writein_Dlinked_List[$c_id][P] = $prev;
+			self::$_soul_writein_Dlinked_List[$prev][N] = $c_id;
+		}
+		if (false !== $next){
+			self::$_soul_writein_Dlinked_List[$next][P] = $c_id;
+			self::$_soul_writein_Dlinked_List[$c_id][N] = $next;
+		}
+		return $c_id;
+	}
 }
 
 ?>

@@ -26,12 +26,18 @@ $mem_effect_len_array[0][1][32] = 5;
 
 $mem_effect_len_array['max'] = 5; //默认max
 
+//bits 位约定, 注: 9 为 16位的高8位 ; 8 为16位的低8位
+$bits_array = array(8,9,16,32);
 
 //当段中有如下指令时无法处理，放弃整段
 $can_not_deal_operation = array(
 
 );
 
+//别名指令，统一
+$inst_alias = array(
+    'RETN' => 'RET',
+);
 
 //定长跳转有range限制的
 $range_limit_static_jmp = array(

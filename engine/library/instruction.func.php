@@ -22,9 +22,23 @@ class Instruction{
 	private static $_con_abs_jmp;
 	private static $_eip_instruction;
 	private static $_mem_opt;
+	private static $_alias_inst;
+	private static $_bits;
+
+	private static $_pattern_regs; //全 通用寄存器 匹配
    
     //*** 指令集
 	private static $_instruction;
+
+    //创建 所有通用寄存器 通配字符串
+	private static function genRegPattern(){
+		$ret = "";
+	    foreach (self::$_register_total as $a => $b){
+			$ret .=  '(?<![0-9A-Z])'.'('."$a".')'.'(?![0-9A-Z]+)'.'|';
+		}
+		$ret = substr ($ret,0,strlen($ret) - 1);
+		return $ret;
+	}
 
 	public static function show(){		
 		echo '<br>self::$_register';
@@ -66,10 +80,30 @@ class Instruction{
 		self::$_con_abs_jmp            = $con_abs_jmp;
 		self::$_eip_instruction        = $eip_instruction;
 		self::$_mem_opt                = $mem_opt;
+		self::$_alias_inst             = $inst_alias;
+		self::$_bits                   = $bits_array;
 
 		//***
 		require dirname(__FILE__)."/../instructions/intl.inc.php";
 		self::$_instruction = $Intel_instruction;
+
+		//***
+		self::$_pattern_regs = self::genRegPattern();
+	}
+
+	//位数统计
+	// $dir: 1 : 大于等于 $bits 的所有位
+	public static function getBitsArray($bits=0,$dir=1){
+		if (9 >= $bits){ // 8,9 是 16位 的 高低表示
+			$bits = 8;
+		}
+		$ret = array();
+		foreach (self::$_bits as $a){
+			if ($a >= $bits){
+				$ret[] = $a;
+			}
+		}
+		return $ret;
 	}
 
     //是否是prefix
@@ -96,28 +130,79 @@ class Instruction{
 		}
 		return $ret;
 	}
-
-	public static function getMemOpt($inst){
-		if (isset(self::$_mem_opt[$inst])){
-			return self::$_mem_opt[$inst];
-		}else{
-			return false;
+    
+	//返回 opt 涉及写操作 的 通用(标志)寄存器 数组 $ret[FLAG]   = array('','')
+	//                                             $ret[NORMAL] = array('','') #不区分bits
+	//                                             $ret[STACK]  = 
+	public static function getRegWriteArrayByOpt($inst,$param_num){
+		$ret = false;
+		if (isset(self::$_instruction[$inst])){
+			$r = array();
+		    $c = self::$_instruction[$inst];
+		    if (isset(self::$_instruction[$inst]['multi_op'])){
+				if (isset($c[$param_num])){
+					$r[] = $c[$param_num];
+				}else{
+					unset($c['multi_op']);
+					$r = $c;
+				}				
+			}else{
+			    $r[0] = $c;
+			}
+			foreach ($r as $a){
+				foreach ($a as $b => $z){
+					if (STACK === $b){
+						$ret[STACK] = $z;
+					}else{
+						if ($z > 1) { //write opt
+							if (self::isEflag($b)){
+								$ret[FLAG_WRITE_ABLE][$b] = $z;
+							}elseif (false !== ($j = self::getGeneralRegIndex($b))){
+								$ret[NORMAL_WRITE_ABLE][$j] = $z;
+							}//else{
+							//	echo "<br>drop...$b<br>";
+							//}					
+						}
+					}
+				}
+			}
 		}
+		return $ret;		
+	}
+
+	//获取内存地址中的通用寄存器
+	public static function getRegInMem($mem){
+		$ret = array();
+		if (preg_match_all('/'.self::$_pattern_regs.'/',$mem,$tmp)){
+			$ret = $tmp[0];
+		}
+		return $ret;	    
+	}
+
+
+	//获取指令别名(如果有的话)
+	public static function getInstAlias($inst){
+	    return (isset(self::$_alias_inst[$inst]))?self::$_alias_inst[$inst]:$inst;
+	}
+    //内存操作 指令
+	public static function getMemOpt($inst){
+		return (isset(self::$_mem_opt[$inst]))?(self::$_mem_opt[$inst]):false;
 	}
 	
 	public static function isEipInst($inst){
-	    return self::$_eip_instruction[$inst];
+		return isset(self::$_eip_instruction[$inst]);
 	}
 
     public static function isJmp($inst,$type=false){
-	    $a = self::$_con_abs_jmp[$inst];
-		if (false === $type){
-		    return $a;
-		}else if ($type === $a){
-		    return true;
-		}else{
-		    return false;
+		if (isset(self::$_con_abs_jmp[$inst])){
+			$a = self::$_con_abs_jmp[$inst];
+			if (false === $type){
+				return $a;
+			}else if ($type === $a){
+				return true;
+			}
 		}
+		return false;
 	}
 
 	public static function randUnLmtJcc(){
@@ -125,11 +210,11 @@ class Instruction{
 	}
 
     public static function isMatchCC($cc,$inst){
-		return (self::$_cc_insts[$inst] === $cc);
+		return ((isset (self::$_cc_insts[$inst])) and (self::$_cc_insts[$inst] === $cc));
 	}
 
 	public static function getMatchCC($inst){
-	    return self::$_cc_insts[$inst];
+	    return (isset(self::$_cc_insts[$inst]))?(self::$_cc_insts[$inst]):false;
 	}
 
     public static function isJmpStatic($inst){
@@ -171,44 +256,36 @@ class Instruction{
 			return $ret;
 		}
 	}
-
-    //指定 寄存器 获取 对应的 通用寄存器 索引名
+	// 获取随机寄存器,可指定不含部分
+	public static function getRandomReg($bits,$filter=array()){
+		$r = self::$_register_index[$bits];
+		if (!empty($filter)){
+			foreach ($filter as $a){
+				unset($r[$a]);
+			}
+		}
+		if (!empty($r)){
+			return array_rand($r);
+		}else{
+			return false;
+		}
+	}  
+    // 指定 寄存器 获取 对应的 通用寄存器 索引名
 	public static function getGeneralRegIndex($reg){
-	    if (isset(self::$_register_asort[$reg])){
-		    return self::$_register_asort[$reg];
-		}else{
-		    return false;
-		}
+		return (isset(self::$_register_asort[$reg]))?(self::$_register_asort[$reg]):false;
 	}
 
-    //指定 寄存器 获取 对应的 位数
+    // 指定 寄存器 获取 对应的 位数
 	public static function getGeneralRegBits($reg){
-        if (isset(self::$_register_total[$reg])){
-		    return self::$_register_total[$reg];
-		}else{
-		    return false;
-		}
-	}
-    //创建 所有通用寄存器 通配字符串
-	public static function genRegPattern(){
-		$ret = "";
-	    foreach (self::$_register_total as $a => $b){
-			$ret .=  '(?<![0-9A-Z])'.'('."$a".')'.'(?![0-9A-Z]+)'.'|';
-		}
-		$ret = substr ($ret,0,strlen($ret) - 1);
-		return $ret;
+		return (isset(self::$_register_total[$reg]))?(self::$_register_total[$reg]):false;
 	}
 
-	//指定 寄存器索引 + 位数  获取 对应的 寄存器
+	// 指定 寄存器索引 + 位数  获取 对应的 寄存器
 	public static function getRegByIdxBits($bits,$reg){
-	    if (isset(self::$_register_index[$bits][$reg])){
-		    return self::$_register_index[$bits][$reg];
-		}else{
-		    return false;
-		}
+	    return (isset(self::$_register_index[$bits][$reg]))?(self::$_register_index[$bits][$reg]):false;
 	}
 
-	//指定 寄存器索引   获取 对应 的 寄存器 数组
+	// 指定 寄存器索引   获取 对应 的 寄存器 数组
 	public static function getRegsByIdx($idx){
 		$ret = false;
 	    foreach (self::$_register_index as $a){
@@ -221,11 +298,7 @@ class Instruction{
 	
 	//指定 寄存器位数  获取 对应 的 寄存器 数组
 	public static function getRegsByBits($bits){
-		if (isset(self::$_register_index[$bits])){
-		    return self::$_register_index[$bits];
-		}else{
-			return false;
-		}
+		return (isset(self::$_register_index[$bits]))?(self::$_register_index[$bits]):false;
 	}
 
 

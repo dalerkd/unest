@@ -220,7 +220,7 @@ class OrganPoly{
 								$x = $poly_model[USABLE][$z][N][MEM_OPT_ABLE];
 								foreach ($x as $t => $u){
 									if (self::is_same_mem($rand_result[$v],$all_valid_mem_opt_index[$u][CODE])){
-																			echo "   same";
+																			//echo "   same";
 											unset ($poly_model[USABLE][$z][N][MEM_OPT_ABLE][$t]);                                                                     
 									}
 								}                                               
@@ -309,9 +309,11 @@ class OrganPoly{
 			//检查new stack 是否冲突
 			if (true !== $org[STACK]){			
 				if (true === self::$_poly_model_repo[$obj][$b]['new_stack']){
-					echo "<font color=red>stack conflict!";
-					var_dump ($usable_poly_model[$a]);
-					echo '</font>';
+					if (defined('DEBUG_ECHO') && defined ('POLY_DEBUG_ECHO')){
+						echo "<font color=red>stack conflict!";
+						var_dump ($usable_poly_model[$a]);
+						echo '</font>';
+					}
 					unset($usable_poly_model[$a]);
 					continue;
 				}		    
@@ -572,7 +574,7 @@ class OrganPoly{
     public static function get_usable_models($obj){
         global $pattern_reloc;
 		global $c_rel_info;
-		global $stack_pointer_reg;
+
 	
 
 	    $ret = false;
@@ -590,7 +592,7 @@ class OrganPoly{
 							continue;
 						}
 						//r 区分出为堆栈指针的寄存器 's'
-						if (Instruction::getGeneralRegIndex($obj[PARAMS][$a]) == $stack_pointer_reg){
+						if (Instruction::getGeneralRegIndex($obj[PARAMS][$a]) == STACK_POINTER_REG){
 							$b = 's';
 						}
 					}

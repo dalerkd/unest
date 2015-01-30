@@ -12,19 +12,15 @@ $user_option['del_last_nop'] = true; //自动去掉节表末尾用来对齐的 n
 //当前系统命令行 最长 字符 长度 见readme  2013/04/19
 define ('ARG_MAX',5000);                  
 //////////////////////////////////////////
-define('UNEST.ORG', TRUE);
+define ('UNEST.ORG', TRUE);
 ////////////////////////////////////////////
 //ready -> generate 中间文件版本号,避免ready生成的rdy文件被不匹配的generat处理
 define ('ENGIN_VER',6);                  
 //////////////////////////////////////////
 //organs Templates Version
-define('MEAT_TPL_VER',1);
 define('BONE_TPL_VER',1);
+define('MEAT_TPL_VER',1);
 define('POLY_TPL_VER',1);
-//////////////////////////////////////////
-//organ 常数定义
-define ('BONE_MULTI_MAX_SIZE', 50);// 多通道 骨架 最大包含单位 (指令条数)
-define ('MEAT_MAX_SINGLE_UNIT',50);// 单插入meat最大指令条数 (见 /readme/readme.meat.txt)
 
 //////////////////////////////////////////
 //log level
@@ -37,6 +33,14 @@ define ('NOTICE'  ,3);
   define ('CTPL_OPT',1); //指令 
 //define ('CTPL_POS',2); //位置 (如：前中后)
 //define ('CTPL_PRM',3); //参数 (如：有无整数)
+  define ('CTPL_INI',4); //单位初始化 character
+
+//////////////////////////////////////////
+//操作权限
+define ('R' , 1);  //只读
+define ('W' , 2);  //只写
+define ('RW', 3);  //读写
+define ('NP',-1);  //无操作 ? 应改为0 ?
 
 //////////////////////////////////////////
 //inst array index

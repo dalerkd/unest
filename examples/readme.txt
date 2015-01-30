@@ -49,11 +49,11 @@ windows 驱动程序 (编译连接器: WDK 7600.16385.1)
 
 ./4.config    混淆配置文件
 
-./4/Release/libcmt.lib.origi                     vs2010自带libcmt库
-./4/Release/memset.obj.origi                     vs2010自带libcmt库中导出的memset.obj
+./4/Release/libcmt.lib.origi                   vs2010自带libcmt库
+./4/Release/memset.obj.origi                   vs2010自带libcmt库中导出的memset.obj
 ./4/Release/memset.obj.unest                   经过混淆处理后的memset.obj
 ./4/Release/libcmt.lib.unest                   经过混淆处理后的memset.obj 导入替换后的 libcmt.lib
 
 
-./4/Release/test.origi.exe                       使用自带libcmt库编译的demo执行文档
+./4/Release/test.origi.exe                     使用自带libcmt库编译的demo执行文档
 ./4/Release/test.unest.exe                     使用混淆处理后的libcmt库编译的demo执行文档

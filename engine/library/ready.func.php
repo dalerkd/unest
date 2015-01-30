@@ -57,15 +57,15 @@ class ReadyFunc{
 		$index = 1;
 		foreach ($soul_usable as $a => $b){
 			foreach ($b as $c => $d){
-				if ($d['prev'][FLAG_WRITE_ABLE]){
+				if (isset($d['prev'][FLAG_WRITE_ABLE])){
 					$ret[$a][$c][P][FLAG_WRITE_ABLE] = $d['prev'][FLAG_WRITE_ABLE];
 				}
-				if ($d['prev'][NORMAL_WRITE_ABLE]){
+				if (isset($d['prev'][NORMAL_WRITE_ABLE])){
 					$ret[$a][$c][P][NORMAL_WRITE_ABLE] = $d['prev'][NORMAL_WRITE_ABLE];
 				}
-				if ($d['prev'][MEM_OPT_ABLE]){
+				if (isset($d['prev'][MEM_OPT_ABLE])){
 					foreach ($d['prev'][MEM_OPT_ABLE] as $z => $y){
-						if ($all_valid_mem_opt_record[$z][$y[BITS]][$y[OPT]]){
+						if (isset($all_valid_mem_opt_record[$z][$y[BITS]][$y[OPT]])){
 							$ret[$a][$c][P][MEM_OPT_ABLE][] = $all_valid_mem_opt_record[$z][$y[BITS]][$y[OPT]];
 						}else{
 							$all_valid_mem_opt_index[$index] = $d['prev'][MEM_OPT_ABLE][$z];
@@ -80,15 +80,15 @@ class ReadyFunc{
 					$ret[$a][$c][P][STACK] = true;
 				}
 
-				if ($d['next'][FLAG_WRITE_ABLE]){
+				if (isset($d['next'][FLAG_WRITE_ABLE])){
 					$ret[$a][$c][N][FLAG_WRITE_ABLE] = $d['next'][FLAG_WRITE_ABLE];
 				}
-				if ($d['next'][NORMAL_WRITE_ABLE]){
+				if (isset($d['next'][NORMAL_WRITE_ABLE])){
 					$ret[$a][$c][N][NORMAL_WRITE_ABLE] = $d['next'][NORMAL_WRITE_ABLE];
 				}
-				if ($d['next'][MEM_OPT_ABLE]){
+				if (isset($d['next'][MEM_OPT_ABLE])){
 					foreach ($d['next'][MEM_OPT_ABLE] as $z => $y){
-						if ($all_valid_mem_opt_record[$z][$y[BITS]][$y[OPT]]){
+						if (isset($all_valid_mem_opt_record[$z][$y[BITS]][$y[OPT]])){
 							$ret[$a][$c][N][MEM_OPT_ABLE][] = $all_valid_mem_opt_record[$z][$y[BITS]][$y[OPT]];
 						}else{
 							$all_valid_mem_opt_index[$index] = $d['next'][MEM_OPT_ABLE][$z];
@@ -173,11 +173,11 @@ class ReadyFunc{
 			foreach ($b as $c => $d){
 				if ('-' === $d)
 					continue;
-				if (!$history_prev[$d]){  //  第一次，直接赋值
+				if (!isset($history_prev[$d])){  //  第一次，直接赋值
 					$history_prev[$d] = true;
-					$ret[$d]['prev'] = $c_valid_mem_opt_tmp[$a][$d]['prev'];
+					$ret[$d]['prev'] = isset($c_valid_mem_opt_tmp[$a][$d]['prev'])?$c_valid_mem_opt_tmp[$a][$d]['prev']:NULL;
 				}else{               //非第一次，做merge
-					if ((!is_array($ret[$d]['prev'])) || (!is_array($c_valid_mem_opt_tmp[$a][$d]['prev']))){
+					if ((!isset($ret[$d]['prev'])) || (!isset($c_valid_mem_opt_tmp[$a][$d]['prev']))){
 						unset ($ret[$d]['prev']);
 					}else{
 						if ($ret[$d]['prev'] == $c_valid_mem_opt_tmp[$a][$d]['prev']){
@@ -189,15 +189,15 @@ class ReadyFunc{
 					}
 				}
 
-				if ('-' === $b[$c + 1]){ //jcc 跳转 的后保护被忽略，而不是禁用所有 | jmp/ret/call 之类绝对跳转不管，后一指令的前保护就等于继承了
+				if ((isset($b[$c + 1])) and ('-' === $b[$c + 1])){ //jcc 跳转 的后保护被忽略，而不是禁用所有 | jmp/ret/call 之类绝对跳转不管，后一指令的前保护就等于继承了
 						continue;
 				}
-				if (!$history_next[$d]){  //  第一次，直接赋值
+				if (!isset($history_next[$d])){  //  第一次，直接赋值
 					
 					$history_next[$d] = true;
-					$ret[$d]['next'] = $c_valid_mem_opt_tmp[$a][$d]['next'];				
+					$ret[$d]['next'] = isset($c_valid_mem_opt_tmp[$a][$d]['next'])?$c_valid_mem_opt_tmp[$a][$d]['next']:NULL;				
 				}else{               //非第一次，做merge
-					if ((!is_array($ret[$d]['next'])) || (!is_array($c_valid_mem_opt_tmp[$a][$d]['next']))){
+					if ((!isset($ret[$d]['next'])) || (!isset($c_valid_mem_opt_tmp[$a][$d]['next']))){
 						unset ($ret[$d]['next']);
 					}else{
 						if ($ret[$d]['next'] == $c_valid_mem_opt_tmp[$a][$d]['next']){ 
@@ -217,7 +217,7 @@ class ReadyFunc{
 	private static function merge_available_mem_array ($a,$b){
 		$ret = array();	
 		foreach ($a as $z => $y){
-			if ($b[$z]){                   //相同 内存地址，按保守 合并
+			if (isset($b[$z])){                   //相同 内存地址，按保守 合并
 				$c_reg = false;
 				if (isset($b[$z][REG])){ //相同 内存地址，被影响的通用寄存器肯定相同
 					$ret[$z][REG] = $b[$z][REG];
@@ -275,7 +275,7 @@ class ReadyFunc{
 	*/
 	private static function mem_opt_bits_parser($a,&$ret){
 		foreach ($a as $b => $c){		
-			if (is_array($c['prev'])){
+			if (isset($c['prev'])){
 				foreach ($c['prev'] as $d => $e){
 					foreach ($e as $f => $g){
 						if ($f != REG){
@@ -297,7 +297,7 @@ class ReadyFunc{
 					}
 				}		 
 			}
-			if (is_array($c['next'])){
+			if (isset($c['next'])){
 				foreach ($c['next'] as $d => $e){
 					foreach ($e as $f => $g){
 						if ($f != REG){
@@ -390,7 +390,7 @@ class ReadyFunc{
 		$break = false;
 		if ($obj_reg){ //有效内存 由 寄存器 构建，当寄存器被改写，中断所有操作
 			foreach ($obj_reg as $z => $y){
-				if (is_array($c_normal_register_opt[$y])){
+				if (isset($c_normal_register_opt[$y])){
 					foreach ($c_normal_register_opt[$y] as $x => $w){
 						if ($w > 1){										
 							$break = true;
@@ -422,13 +422,13 @@ class ReadyFunc{
 			//var_dump ($objs);
 			foreach ($objs as $c => $d){
 				for ($k = 0;;$k++){
-					if (!$c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k]){
+					if (!isset($c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k])){
 						break;
 					}
 				
 					$obj_reg = false;
 					//正常情况下，一条指令至多一个内存地址，直接[$k = 0]取
-					if ($c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k][REG]){
+					if (isset($c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k][REG])){
 						$obj_reg = $c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k][REG];
 					}
 					$opt_permission = 1;
@@ -456,11 +456,13 @@ class ReadyFunc{
 						}
 						//echo $c_exec_thread_list[$i]." prev,";
 						$i--;			
-						if ('-' === $c_exec_thread_list[$i]){ //来源跳转					
+						if ((isset($c_exec_thread_list[$i])) and ('-' === $c_exec_thread_list[$i])){ //来源跳转					
 							$i--;	
 							//有效内存 由 寄存器 构建，当寄存器被改写，中断所有操作
-							if (self::break_avoid_mem_usable_reg($obj_reg,$c_normal_register_opt_array[$c_exec_thread_list[$i]])){
-								break;
+							if (isset($c_normal_register_opt_array[$c_exec_thread_list[$i]])){
+								if (self::break_avoid_mem_usable_reg($obj_reg,$c_normal_register_opt_array[$c_exec_thread_list[$i]])){
+									break;
+								}
 							}
 							continue;
 						}	
@@ -486,7 +488,7 @@ class ReadyFunc{
 						//////////////////////////////////////////////////////////////////////
 						//有任何(除 自身 外) 任何操作 【MEM】则断 -> 写操作
 						if ($opt_permission > 1){
-							if (is_array($c_valid_mem_opt_array[$c_exec_thread_list[$i]][$k])){
+							if (isset($c_valid_mem_opt_array[$c_exec_thread_list[$i]][$k])){
 								if ($c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k][CODE] !== $c_valid_mem_opt_array[$c_exec_thread_list[$i]][$k][CODE]){
 									$opt_permission = 1;
 								}
@@ -502,13 +504,13 @@ class ReadyFunc{
 			$objs = array_keys($c_exec_thread_list,$a);
 			foreach ($objs as $c => $d){
 				for ($k = 0;;$k++){
-					if (!$c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k]){
+					if (!isset($c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k])){
 						break;
 					}
 				
 					$obj_reg = false;
 					//正常情况下，一条指令至多一个内存地址，直接[$k = 0]取
-					if ($c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k][REG]){
+					if (isset($c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k][REG])){
 						$obj_reg = $c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k][REG];
 					}
 					
@@ -523,13 +525,15 @@ class ReadyFunc{
 					$i = $d;				
 					$opt_permission = 1; //只读		向下继承，全部只读
 					
-					while ($c_exec_thread_list[$i+1]){        //向下遍历，继承 可读
+					while (isset($c_exec_thread_list[$i+1])){        //向下遍历，继承 可读
 															  //如果到本流程最后一个单位，此单位后可用为空 
 															  //
 						//////////////////////////////////////////////////////////////////////
 						//有效内存 由 寄存器 构建，当寄存器被改写，中断所有操作
-						if (self::break_avoid_mem_usable_reg($obj_reg,$c_normal_register_opt_array[$c_exec_thread_list[$i]])){
-							break;
+						if (isset($c_normal_register_opt_array[$c_exec_thread_list[$i]])){
+							if (self::break_avoid_mem_usable_reg($obj_reg,$c_normal_register_opt_array[$c_exec_thread_list[$i]])){
+								break;
+							}
 						}						
 						//////////////////////////////////////////////////////////////////////					
 						if (!isset($ret[$c_exec_thread_list[$i]]['next'][$c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k][CODE]][$c_bits])){
@@ -545,7 +549,7 @@ class ReadyFunc{
 								$ret[$c_exec_thread_list[$i]]['prev'][$c_valid_mem_opt_array[$c_exec_thread_list[$d]][$k][CODE]][REG] = $obj_reg;
 							}
 						}
-						if ('-' === $c_exec_thread_list[$i + 1]){  //来源跳转
+						if ((isset($c_exec_thread_list[$i + 1])) and ('-' === $c_exec_thread_list[$i + 1])){  //来源跳转
 							$i ++;
 							continue;
 						}
@@ -595,6 +599,8 @@ class ReadyFunc{
 		global $soul_forbid;
 		global $soul_usable;
 
+		$miss_next_element = false;
+
 		$normal_reg_extend_down = array( //位数向下包容  {{{al}{ah}ax}eax}
 		   8 => array (8 => true),
 		   9 => array (9 => true),
@@ -638,7 +644,7 @@ class ReadyFunc{
 					if ($miss_next_element){
 						$miss_next_element = false;
 					}else{
-						if (!$next_dealed_record[$exec_thread_list[$a][$c][$max]]){
+						if (!isset($next_dealed_record[$exec_thread_list[$a][$c][$max]])){
 							$soul_usable[$a][$exec_thread_list[$a][$c][$max]]['next'][FLAG_WRITE_ABLE]    = $c_flag_reg_usable_array;
 							$soul_usable[$a][$exec_thread_list[$a][$c][$max]]['next'][NORMAL_WRITE_ABLE]  = $c_normal_reg_usable_array;
 							$next_dealed_record[$exec_thread_list[$a][$c][$max]] = true;
@@ -656,7 +662,7 @@ class ReadyFunc{
 						}
 					}
 					//标志 寄存器
-					if (is_array($flag_register_opt_array[$a][$d[$max]])){
+					if (isset($flag_register_opt_array[$a][$d[$max]])){
 						foreach ($flag_register_opt_array[$a][$d[$max]] as $e => $f){
 							if ($f == 2){ //2. 写操作
 								$c_flag_reg_usable_array[$e] = true;
@@ -693,7 +699,7 @@ class ReadyFunc{
 							}
 						}
 					}
-					if (!$prev_dealed_record[$exec_thread_list[$a][$c][$max]]){
+					if (!isset($prev_dealed_record[$exec_thread_list[$a][$c][$max]])){
 						$soul_usable[$a][$exec_thread_list[$a][$c][$max]]['prev'][FLAG_WRITE_ABLE]    = $c_flag_reg_usable_array;
 						$soul_usable[$a][$exec_thread_list[$a][$c][$max]]['prev'][NORMAL_WRITE_ABLE]  = $c_normal_reg_usable_array;
 						$prev_dealed_record[$exec_thread_list[$a][$c][$max]] = true;
@@ -721,7 +727,7 @@ class ReadyFunc{
 					if (false === $stack_flag){
 						$stack_buff[$max] = 3;
 					}
-					if ($stack_broke[$a][$exec_thread_list[$a][$c][$max]]){					
+					if (isset ($stack_broke[$a][$exec_thread_list[$a][$c][$max]])){					
 						if (true === $stack_flag){
 							$stack_flag = false;
 						}else{
@@ -730,7 +736,7 @@ class ReadyFunc{
 							unset($stack_buff);
 						}	    
 						$stack_buff[$max] = 1;
-					}elseif ($stack_used[$a][$exec_thread_list[$a][$c][$max]]){					
+					}elseif (isset($stack_used[$a][$exec_thread_list[$a][$c][$max]])){					
 						//echo "<br><font color=red>$a $max</font>";
 						unset($stack_buff);
 						$stack_flag = true;
@@ -744,49 +750,49 @@ class ReadyFunc{
 			}		
 			//把寄存器 可写 记录合并 {8,9,16} => 16  {8,9,16,32} => 32
 			foreach ($StandardAsmResultArray[$a] as $z => $y){
-				if ($soul_usable[$a][$z]['prev'][NORMAL_WRITE_ABLE]){
+				if (isset($soul_usable[$a][$z]['prev'][NORMAL_WRITE_ABLE])){
 					foreach ($soul_usable[$a][$z]['prev'][NORMAL_WRITE_ABLE] as $x => $w){
-						if ($w[32]){
+						if (isset($w[32])){
 							unset ($soul_usable[$a][$z]['prev'][NORMAL_WRITE_ABLE][$x][8]);
 							unset ($soul_usable[$a][$z]['prev'][NORMAL_WRITE_ABLE][$x][9]);
 							unset ($soul_usable[$a][$z]['prev'][NORMAL_WRITE_ABLE][$x][16]);
-						}elseif ($w[16]){
+						}elseif (isset($w[16])){
 							unset ($soul_usable[$a][$z]['prev'][NORMAL_WRITE_ABLE][$x][8]);
 							unset ($soul_usable[$a][$z]['prev'][NORMAL_WRITE_ABLE][$x][9]);
 						}
 					}
 				}
-				if ($soul_forbid[$a][$z][P][NORMAL]){
+				if (isset($soul_forbid[$a][$z][P][NORMAL])){
 					foreach ($soul_forbid[$a][$z][P][NORMAL] as $x => $w){
-						if ($w[32]){
+						if (isset($w[32])){
 							unset ($soul_forbid[$a][$z][P][NORMAL][$x][8]);
 							unset ($soul_forbid[$a][$z][P][NORMAL][$x][9]);
 							unset ($soul_forbid[$a][$z][P][NORMAL][$x][16]);
-						}elseif ($w[16]){
+						}elseif (isset($w[16])){
 							unset ($soul_forbid[$a][$z][P][NORMAL][$x][8]);
 							unset ($soul_forbid[$a][$z][P][NORMAL][$x][9]);
 						}
 					}
 				}
-				if (is_array($soul_usable[$a][$z]['next'][NORMAL_WRITE_ABLE])){
+				if (isset($soul_usable[$a][$z]['next'][NORMAL_WRITE_ABLE])){
 					foreach ($soul_usable[$a][$z]['next'][NORMAL_WRITE_ABLE] as $x => $w){
-						if ($w[32]){
+						if (isset($w[32])){
 							unset ($soul_usable[$a][$z]['next'][NORMAL_WRITE_ABLE][$x][8]);
 							unset ($soul_usable[$a][$z]['next'][NORMAL_WRITE_ABLE][$x][9]);
 							unset ($soul_usable[$a][$z]['next'][NORMAL_WRITE_ABLE][$x][16]);
-						}elseif ($w[16]){
+						}elseif (isset($w[16])){
 							unset ($soul_usable[$a][$z]['next'][NORMAL_WRITE_ABLE][$x][8]);
 							unset ($soul_usable[$a][$z]['next'][NORMAL_WRITE_ABLE][$x][9]);
 						}
 					}
 				}
-				if ($soul_forbid[$a][$z][N][NORMAL]){
+				if (isset($soul_forbid[$a][$z][N][NORMAL])){
 					foreach ($soul_forbid[$a][$z][N][NORMAL] as $x => $w){
-						if ($w[32]){
+						if (isset($w[32])){
 							unset ($soul_forbid[$a][$z][N][NORMAL][$x][8]);
 							unset ($soul_forbid[$a][$z][N][NORMAL][$x][9]);
 							unset ($soul_forbid[$a][$z][N][NORMAL][$x][16]);
-						}elseif ($w[16]){
+						}elseif (isset($w[16])){
 							unset ($soul_forbid[$a][$z][N][NORMAL][$x][8]);
 							unset ($soul_forbid[$a][$z][N][NORMAL][$x][9]);
 						}
@@ -826,9 +832,9 @@ class ReadyFunc{
 	private static function merge_normal_reg_array (&$a,$b){
 		$tmp = array();
 		foreach ($a as $z => $y){
-			if (is_array($b[$z])){
+			if (isset($b[$z])){
 				foreach ($b[$z] as $x => $w){
-					if ($y[$x]){
+					if (isset($y[$x])){
 						$tmp[$z][$x] = true;
 					}
 				}    
@@ -844,7 +850,7 @@ class ReadyFunc{
 	private static function merge_flag_reg_array (&$a,$b){
 		$tmp = array();
 		foreach ($a as $z => $y){
-			if ($b[$z] == $y){
+			if ((isset($b[$z])) and ($b[$z] == $y)){
 				$tmp[$z] = $y;
 			}
 		}
@@ -876,7 +882,7 @@ class ReadyFunc{
 					$c_enumming_array[$list_id_ptr] = $c_line + 1;		    
 					if ($c_solid_jmp_to[$c_line]){ //有明确跳转 dest
 						if ($c_solid_jmp_to[$c_line] <= $c_line){ //回跳记录
-							if (true !== $jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]]){
+							if (!isset($jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]])){
 								$jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]] = true;
 							}else{
 								return;
@@ -894,12 +900,12 @@ class ReadyFunc{
 				if (Instruction::isJmp($c_asm_array[$c_line][OPERATION],2)){ //绝对跳转 (备忘:ret/jmp... 后面应无需考虑执行)
 																		 	  //         (         call   后面应  需考虑执行)
 					$tmp = $c_line + 1;
-					if (!$bound_start[$tmp]){					
+					if ((!isset($bound_start[$tmp])) or (!$bound_start[$tmp])){					
 						$bound_start[$tmp] = true;
 						$list_id_ptr ++;
 						$c_enumming_array[$list_id_ptr] = $c_line + 1;					
 					}
-					if ($c_solid_jmp_to[$c_line]){ //有明确跳转 dest
+					if ((isset($c_solid_jmp_to[$c_line])) and ($c_solid_jmp_to[$c_line])){ //有明确跳转 dest
 						if ($c_solid_jmp_to[$c_line] <= $c_line){ //回跳记录
 							if (true !== $jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]]){
 								$jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]] = true;
@@ -950,7 +956,8 @@ class ReadyFunc{
 					break;
 				}
 				unset ($c_enumming_array[$c]);
-				self::deal_exec_thread_list_get($d,$StandardAsmResultArray[$a],$a,key($AsmLastSec[$a]),$solid_jmp_to[$a],$exec_thread_list,$c,$c_enumming_array,$list_id_ptr,$jmp_back_record,$bound_start);	   
+				$tmp = isset($solid_jmp_to[$a])?$solid_jmp_to[$a]:NULL;
+				self::deal_exec_thread_list_get($d,$StandardAsmResultArray[$a],$a,key($AsmLastSec[$a]),$tmp,$exec_thread_list,$c,$c_enumming_array,$list_id_ptr,$jmp_back_record,$bound_start);
 			}
 			//这里 不用，见 readme.txt 2013/03/31
 			//对同类项进行合并(包含之中的不做合并，必须完全相同)
@@ -981,7 +988,7 @@ class ReadyFunc{
 
 
 
-		$pattern_regs = Instruction::genRegPattern();
+
 
 		$CodeSectionArray = $myTables['CodeSectionArray'];
 		foreach ($CodeSectionArray as $a => $b){
@@ -1029,7 +1036,7 @@ class ReadyFunc{
 							}						
 							if ('[' === $x) {
 								$StandardAsmResultArray[$a][$c][P_TYPE][$p_ptr] = 'm';
-								if (!$c_solid_bits[$p_ptr]){
+								if ((!isset($c_solid_bits[$p_ptr])) or (!$c_solid_bits[$p_ptr])){
 									$mem_ptr_bits_recal[$p_ptr] = true;
 								}
 								$c_param_type_complete = true;
@@ -1051,7 +1058,12 @@ class ReadyFunc{
 								$c_solid_bits[$p_ptr] = 32;
 							}
 						}
-						$StandardAsmResultArray[$a][$c][PARAMS][$p_ptr] .= $x; 					
+						if (isset($StandardAsmResultArray[$a][$c][PARAMS][$p_ptr])){
+						    $StandardAsmResultArray[$a][$c][PARAMS][$p_ptr] .= $x;
+						}else{
+						    $StandardAsmResultArray[$a][$c][PARAMS][$p_ptr]  = $x;
+						}
+						
 					}else{					
 						if ($x === ' '){
 							continue;
@@ -1093,7 +1105,7 @@ class ReadyFunc{
 					}
 				}			
 				//检查参数，如有内存地址，则净化它，取得干净的[...]内容(去前缀,含[]号)
-				if (is_array($StandardAsmResultArray[$a][$c][P_TYPE])){
+				if (isset($StandardAsmResultArray[$a][$c][P_TYPE])){
 					foreach ($StandardAsmResultArray[$a][$c][P_TYPE] as $z => $y){
 						if ('m' === $y){
 							if (preg_match('/\[([^\(]*)\]/',$StandardAsmResultArray[$a][$c][PARAMS][$z],$tmp_filter)){ 
@@ -1107,8 +1119,11 @@ class ReadyFunc{
 				if ($break){ //出错，放弃当前节表处理
 					break;
 				}else{
-
-					$c_instruction = Instruction::getInstructionOpt($StandardAsmResultArray[$a][$c][OPERATION],count ($StandardAsmResultArray[$a][$c][PARAMS]));	
+					if (isset($StandardAsmResultArray[$a][$c][PARAMS])){
+						$c_instruction = Instruction::getInstructionOpt($StandardAsmResultArray[$a][$c][OPERATION],count($StandardAsmResultArray[$a][$c][PARAMS]));	
+					}else{
+						$c_instruction = Instruction::getInstructionOpt($StandardAsmResultArray[$a][$c][OPERATION],0);	
+					}
 
 					if (false === $c_instruction){
 						GeneralFunc::LogInsert($language['section_name']." ".$myTables['CodeSectionArray'][$a]['name'].$language['section_number']." $a ".$language['total_linenumber']." $c , ".$StandardAsmResultArray[$a][$c][OPERATION]." ($multi_op) ".$language['multi_op_fail'],2);
@@ -1119,10 +1134,18 @@ class ReadyFunc{
 					//指令 对 通用/标志 寄存器的影响//
 					foreach ($c_instruction as $z => $y){
 						if (Instruction::isEflag($z)){
-							$flag_register_opt_array[$a][$c][$z] |= $y;
+							if (isset($flag_register_opt_array[$a][$c][$z])){
+								$flag_register_opt_array[$a][$c][$z] |= $y;
+							}else{
+								$flag_register_opt_array[$a][$c][$z]  = $y;
+							}
 						}elseif (Instruction::getGeneralRegBits($z)){ //32位指令 修改 寄存器都 为32位
 							$cri = Instruction::getGeneralRegIndex($z);
-							$normal_register_opt_array[$a][$c][$cri][32] |= $y;
+							if (isset($normal_register_opt_array[$a][$c][$cri][32])){
+								$normal_register_opt_array[$a][$c][$cri][32] |= $y;
+							}else{
+								$normal_register_opt_array[$a][$c][$cri][32]  = $y;
+							}
 							
 							if (Instruction::getGeneralRegIndex($z) === 'ESP'){ //指令 堆栈操作，堆栈有效
 								$stack_used[$a][$c] = true;
@@ -1169,7 +1192,12 @@ class ReadyFunc{
 							}
 							if ('r' === $StandardAsmResultArray[$a][$c][P_TYPE][$z]){ //寄存器	
 								$cri = Instruction::getGeneralRegIndex($y);
-								$normal_register_opt_array[$a][$c][$cri][$StandardAsmResultArray[$a][$c][P_BITS][$z]] |= $c_instruction[$z];								
+								if (isset($normal_register_opt_array[$a][$c][$cri][$StandardAsmResultArray[$a][$c][P_BITS][$z]])){
+									$normal_register_opt_array[$a][$c][$cri][$StandardAsmResultArray[$a][$c][P_BITS][$z]] |= $c_instruction[$z];
+								}else{
+									$normal_register_opt_array[$a][$c][$cri][$StandardAsmResultArray[$a][$c][P_BITS][$z]]  = $c_instruction[$z];
+								}
+
 								if ($c_instruction[$z] > 1){
 									if ($StandardAsmResultArray[$a][$c][PARAMS][$z] === 'ESP'){ //参数 ESP 操作，堆栈有效性 中断
 										$stack_broke[$a][$c] = true;
@@ -1191,15 +1219,18 @@ class ReadyFunc{
 								$c_valid_mem_opt_array[OPT]  = $c_instruction[$z];
 								$c_valid_mem_opt_array[BITS] = $StandardAsmResultArray[$a][$c][P_BITS][$z];
 								//先判断内存指针中是否 含 寄存器，如是，则记为 读
-								if (preg_match_all('/'."$pattern_regs".'/',$y,$tmp)){
-									foreach ($tmp[0] as $w => $v){
-										$cri = Instruction::getGeneralRegIndex($v);
-										$StandardAsmResultArray[$a][$c][P_M_REG][$z][$cri] = 1;
-										$crb = Instruction::getGeneralRegBits($v);
+								$tmp = Instruction::getRegInMem($y);
+								foreach ($tmp as $w => $v){
+									$cri = Instruction::getGeneralRegIndex($v);
+									$StandardAsmResultArray[$a][$c][P_M_REG][$z][$cri] = 1;
+									$crb = Instruction::getGeneralRegBits($v);
+									if (isset($normal_register_opt_array[$a][$c][$cri][$crb])){
 										$normal_register_opt_array[$a][$c][$cri][$crb] |= 1;
-										$c_valid_mem_opt_array[REG][] = $v;
+									}else{
+										$normal_register_opt_array[$a][$c][$cri][$crb]  = 1;
 									}
-								}    
+									$c_valid_mem_opt_array[REG][] = $v;
+								}
 								$valid_mem_opt_array[$a][$c][] = $c_valid_mem_opt_array;
 							}
 						}				
@@ -1358,7 +1389,7 @@ class ReadyFunc{
 				}else{
 					$filt_nop_ptr = false;
 				}
-				if (!$LineNum_Code2Reloc[$a][$c]){ //没有重定位
+				if (!isset($LineNum_Code2Reloc[$a][$c])){ //没有重定位
 					$tmp = explode (' ',$d['asm']);
 					if (Instruction::isEipInst($tmp[0])){  //不考虑 前缀 指令 * 跳转指令前面 有可能有前缀吗？ 不可能()
 														   //                   体现在反汇编级的前缀只有 Lock / rep / repz
@@ -1368,11 +1399,10 @@ class ReadyFunc{
 														   //Segment override prefixes(change DEFAULT segment). (2E, 36, 3E, 26, 64, 65) 不会体现在反汇编代码 前缀部分
 														   //LOCK prefix. (F0)
 						$f = count ($tmp) - 1;
-						if ($tmp[$f - 1] == 'DWORD'){
-							unset ($tmp[$f - 1]);
-						}
-						if ($tmp[$f - 1] == 'SHORT'){
-							unset ($tmp[$f - 1]);
+                        if (isset($tmp[$f - 1])){
+							if (($tmp[$f - 1] == 'SHORT') or ($tmp[$f - 1] == 'DWORD')){
+								unset ($tmp[$f - 1]);
+							}
 						}
 						if (preg_match("/^0X[0-9A-F]{1,8}$/",$tmp[$f])){ //最后一个单位是 目标行
 							$i = hexdec($tmp[$f]);
@@ -1449,7 +1479,7 @@ class ReadyFunc{
 			}
 			foreach ($AsmResultArray[$a] as $c => $d){
 				/****************判断重定位表是否符合规范，否则放弃对当前节表的处理*****************************/
-				if (is_array($RelocArray[$a][$lp_reloc])){
+				if (isset($RelocArray[$a][$lp_reloc])){
 					if  (($RelocArray[$a][$lp_reloc]['Type'] != 6) && ($RelocArray[$a][$lp_reloc]['Type'] != 20)){
 						//目前只处理 ： IMAGE_REL_I386_DIR32 0x0006 重定位目标的32 位VA
 						//              IMAGE_REL_I386_REL32 0x0014 重定位目标的32 位相对偏移。用于支持x86 的相对分支和CALL 指令。
@@ -1495,7 +1525,7 @@ class ReadyFunc{
 								echo "<br> $c [".$d['rva']."]{".$d['len']."} : $reloc_bin ".$d['asm'];
 								echo "<br><<<----------------------------";
 							}
-							if ($LineNum_Code2Reloc[$a][$c]){ //一条指令 对应 多个重定位，放弃处理
+							if (isset($LineNum_Code2Reloc[$a][$c])){ //一条指令 对应 多个重定位，放弃处理
 								GeneralFunc::LogInsert($language['section_name']." ".$myTables['CodeSectionArray'][$a]['name'].$language['section_number']." $a ".$language['reloc_rva']." ".$RelocArray[$a][$lp_reloc]['VirtualAddress']." ".$language['one_asm_more_reloc'],2);
 								unset ($myTables['CodeSectionArray'][$a]);
 								break;
@@ -1782,7 +1812,7 @@ class ReadyFunc{
 		foreach ($tmp as $sec => $a){	    
 			foreach ($a as $line => $b){
 				//echo "<br>line $line: ";
-				if (is_array($b[P][MEM_OPT_ABLE])){
+				if (isset($b[P][MEM_OPT_ABLE])){
 					//if (is_array($b[P][NORMAL_WRITE_ABLE])){
 						foreach ($b[P][MEM_OPT_ABLE] as $mem_index){
 							if (isset($all_valid_mem_opt_index[$mem_index][REG])){
@@ -1797,7 +1827,7 @@ class ReadyFunc{
 						}
 					//}
 				}
-				if (is_array($b[N][MEM_OPT_ABLE])){
+				if (isset($b[N][MEM_OPT_ABLE])){
 					//if (is_array($b[N][NORMAL_WRITE_ABLE])){
 						foreach ($b[N][MEM_OPT_ABLE] as $mem_index){
 							if (isset($all_valid_mem_opt_index[$mem_index][REG])){

@@ -2,52 +2,35 @@
 
 //////////////////////////////////////////
 //堆栈指针 寄存器
-$stack_pointer_reg = 'ESP';
-
+define ('STACK_POINTER_REG','ESP');
 require dirname(__FILE__)."/include/common.inc.php";
-
 require dirname(__FILE__)."/library/generate.func.php";
 require dirname(__FILE__)."/library/general.func.php";
-
 require dirname(__FILE__)."/library/data.construction.php";
-
 require dirname(__FILE__)."/library/organ.func.php";
-
 require dirname(__FILE__)."/library/instruction.func.php";
-Instruction::init();
-
 require dirname(__FILE__)."/library/character.func.php";
-Character::init();
-
 require dirname(__FILE__)."/organs/poly.php";
-OrganPoly::init();
-
 require dirname(__FILE__)."/organs/bone.php";
-OrganBone::init();
-
 require dirname(__FILE__)."/organs/meat.php";
-OrganMeat::init();
-
 require dirname(__FILE__)."/organs/fat.php";
-
 require dirname(__FILE__)."/library/config.func.php";
-
-require_once dirname(__FILE__)."/../nasm.inc.php";
-
+require dirname(__FILE__)."/../nasm.inc.php";
 require dirname(__FILE__)."/library/oplen.func.php";
-
 require dirname(__FILE__)."/library/rel.jmp.func.php";
-
 require dirname(__FILE__)."/library/debug.func.php";
-
 //////////////////////////////////////////
 //捕获超时
 $complete_finished = false; //执行完成标志
 register_shutdown_function('shutdown_except');
 
-//////////////////////////////////////////
-//同时支持$_GET/$_POST/命令行输入 的参数
-CfgParser::get_params($argv,1);
+//init()
+Instruction::init();
+CfgParser::get_params($argv,1); //同时支持$_GET/$_POST/命令行输入 的参数
+Character::init();
+OrganPoly::init();
+OrganBone::init();
+OrganMeat::init();
 
 if (!GeneralFunc::LogHasErr()){
 
@@ -58,30 +41,26 @@ if (!GeneralFunc::LogHasErr()){
 		if (is_array($a)){
 			//////////////////////////////////////////
 			//organ debug echo
-			if (isset($a['all'])){
+			if ((isset($a['all'])) or (isset($a['bone']))){
 				define (BONE_DEBUG_ECHO,true);
-				define (MEAT_DEBUG_ECHO,true);
-				define (POLY_DEBUG_ECHO,true);
-				define (SEC_DEBUG_ECHO ,true);
-				echo "<br><font color=blue><b>* ALL_DEBUG_ECHO</b></font>";
-			}else{
-				if (isset($a['bone_echo'])){
-					define (BONE_DEBUG_ECHO,true);
-					echo "<br><font color=blue><b>* BONE_DEBUG_ECHO</b></font>";
-				}
-				if (isset($a['meat_echo'])){
-					define (MEAT_DEBUG_ECHO,true);
-					echo "<br><font color=blue><b>* MEAT_DEBUG_ECHO</b></font>";
-				}
-				if (isset($a['poly_echo'])){
-					define (POLY_DEBUG_ECHO,true);
-					echo "<br><font color=blue><b>* POLY_DEBUG_ECHO</b></font>";
-				}
-				if (isset($a['sec_echo'])){
-					define (SEC_DEBUG_ECHO,true);
-					echo "<br><font color=blue><b>* SEC_DEBUG_ECHO</b></font>";
-				}
+				echo "<br><font color=blue><b>* BONE_DEBUG_ECHO</b></font>";
 			}
+			if ((isset($a['all'])) or (isset($a['meat']))){
+				define (MEAT_DEBUG_ECHO,true);
+				echo "<br><font color=blue><b>* MEAT_DEBUG_ECHO</b></font>";
+			}
+			if ((isset($a['all'])) or (isset($a['poly']))){
+				define (POLY_DEBUG_ECHO,true);
+				echo "<br><font color=blue><b>* POLY_DEBUG_ECHO</b></font>";
+			}
+			if ((isset($a['all'])) or (isset($a['sec']))){
+				define (SEC_DEBUG_ECHO,true);
+				echo "<br><font color=blue><b>* SEC_DEBUG_ECHO</b></font>";
+			}
+			if ((isset($a['all'])) or (isset($a['char']))){
+				define (CHARACTER_DEBUG_ECHO,true);
+				echo "<br><font color=blue><b>* CHARACTER_DEBUG_ECHO</b></font>";
+			}			
 		}
 	}
 	set_time_limit(CfgParser::params('timelimit'));	
@@ -89,11 +68,10 @@ if (!GeneralFunc::LogHasErr()){
 	$max_output = CfgParser::params('maxoutput');
 
 	$out_file   = CfgParser::params('_file').".out.asm";	
-	$outputfile = CfgParser::params('_file');	
-
+	$outputfile = CfgParser::params('_file'); 
 }
 
-if (!GeneralFunc::LogHasErr()){
+if (!GeneralFunc::LogHasErr()){	
 
 	define ('UNIQUEHEAD',CfgParser::get_rdy('UniqueHead'));
 	$StandardAsmResultArray          = CfgParser::get_rdy('StandardAsmResultArray');
@@ -233,7 +211,9 @@ foreach ($CodeSectionArray as $sec => $body){
 	//
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//根据 双向链表 信息 初始化 character.Rate
-	Character::initDList($soul_writein_Dlinked_List_Total[$sec]['list']);
+	foreach ($soul_writein_Dlinked_List_Total[$sec]['list'] as $a => $b){
+		Character::initUnit($a,SOUL);
+	}	
 	
 	$c_rel_jmp_switcher = $rel_jmp_switcher[$sec];
 
@@ -304,7 +284,9 @@ foreach ($CodeSectionArray as $sec => $body){
 			GeneralFunc::LogInsert($language['section_name'].$body['name'].$language['section_number']."$sec ".$language['section_without_garble'],2);			
 		}
 
-//Character::show();
+        if (defined('DEBUG_ECHO') and defined('CHARACTER_DEBUG_ECHO')){
+				Character::show();
+		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		foreach ($organ_process as $c_process){			
@@ -318,15 +300,13 @@ foreach ($CodeSectionArray as $sec => $body){
             if (POLY === $c_process){
 				if (false !== ($a = Character::random(POLY))){
 					$objs[1] = $a;
-					Character::modifyRate(POLY,$a,-1);
+					Character::modifyRate(POLY,$a,-1); // <- poly失败回滚，这里仍然 -1
 				}						
 			}elseif (MEAT === $c_process){
-				$a = Character::random(MEAT);
-				$b = Character::random(MEAT);
-				$objs = ConstructionDlinkedListOpt::getAmongObjs($a,$b);
-				foreach ($objs as $a){
-					Character::modifyRate(MEAT,$a,-1);
-				}
+				if (false !== ($a = Character::random(MEAT))){
+					$objs[1] = $a;
+					Character::modifyRate(MEAT,$a,-9);
+				}				
 			}elseif (BONE === $c_process){
 				$a = Character::random(BONE);
 				$b = Character::random(BONE);	
@@ -387,7 +367,9 @@ foreach ($CodeSectionArray as $sec => $body){
 			}			
 			//var_dump ($objs);
 			//var_dump ($c_process);
-			//Character::show();
+			if (defined('DEBUG_ECHO') and defined('CHARACTER_DEBUG_ECHO')){
+				Character::show();
+			}
 		}	
 	}
 
