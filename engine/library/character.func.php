@@ -4,24 +4,60 @@
 
 class Character{
 
-    private static $_rate; //rate[type][rate][ListId] = ListId  (type: meat|bone|poly)
-
+    private static $_rate;          // rate[type][rate][ListId] = ListId  (type: meat|bone|poly)
+    private static $_done_idx;      // [ListId] = true , 已处理单位   
 	private static $_rollback_rate;
-
-	private static $_tpl;  //优先级模板
+	private static $_tpl;           // 优先级模板
+	private static $_organ_idx;     // organ index
 
     public static function show(){
 		echo "<table border=1>";
-		echo '<tr><td>POLY</td><td>BONE</td><td>MEAT</td></tr>';
-		echo '<tr><td>';
-        var_dump (self::$_rate[POLY]);
-        echo '</td><td>';
-		var_dump (self::$_rate[BONE]);
-        echo '</td><td>';
-        var_dump (self::$_rate[MEAT]);
-        echo '</td></tr>';
-		echo '</table>';
-	    
+		echo '<tr bgcolor="#c0c0c0">';
+		echo '<td>Character</td>';
+        for ($i = 1;$i<10;$i++){
+			echo '<td>'.$i.'</td>';
+		}
+		echo '</tr>';
+        echo  '<tr><td>BONE</td>'; 
+		for ($i = 1;$i<10;$i++) {
+		    echo '<td>';
+			if (is_array(self::$_rate[BONE][$i])){
+				foreach (self::$_rate[BONE][$i] as $a){
+					if (!isset(self::$_rate[BONE][$i+1][$a])){
+						echo $a.'; ';
+					}
+				}
+			}
+			echo '</td>';
+		}
+        echo '</tr>';
+        echo  '<tr bgcolor="#c0c0c0"><td>MEAT</td>';        
+		for ($i = 1;$i<10;$i++) {
+		    echo '<td>';
+			if (is_array(self::$_rate[MEAT][$i])){
+				foreach (self::$_rate[MEAT][$i] as $a){
+					if (!isset(self::$_rate[MEAT][$i+1][$a])){
+						echo $a.'; ';
+					}
+				}
+			}
+			echo '</td>';
+		}
+		echo '</tr>';
+        echo  '<tr><td>POLY</td>';        
+		for ($i = 1;$i<10;$i++) {
+		    echo '<td>';
+			if (is_array(self::$_rate[POLY][$i])){
+				foreach (self::$_rate[POLY][$i] as $a){
+					if (!isset(self::$_rate[POLY][$i+1][$a])){
+						echo $a.'; ';
+					}
+				}
+			}
+			echo '</td>';
+		}
+        echo '</tr>';
+		echo '</table>';	    
 	}
 
 	public static function ready(){
@@ -35,6 +71,7 @@ class Character{
 	public static function init(){
 	    require dirname(__FILE__)."/../templates/character.tpl.php";
 		self::$_tpl = $character_tpl;
+		self::$_organ_idx = array(BONE,MEAT,POLY);
 	}
 
 	//合并，继承
@@ -47,49 +84,39 @@ class Character{
 		}
 	}
 
-	//初始化...原始灵魂单位
-	public static function initDList($DList){
-		self::$_rate = array();				
-		//基础赋值
-		$extra = array (BONE => 3,MEAT => 3,POLY => 3); //SOUL初始化 各单位基础值 + 3
-		foreach ($DList as $a => $b){
-			self::initUnit($a,SOUL,$extra);
-		}
-	}
-
 	//单位初始化
 	//$DListID:  链表编号
 	//$att    ： 属性来源(soul | meat | poly | bone)
 	//返回    :  Rate
-	public static function initUnit($DListID,$att=SOUL,$extra=array(BONE => 0,MEAT => 0,POLY => 0)){
+	public static function initUnit($DListID,$att=SOUL){
         
 		$ret = false;
 
 		//仅作为单位初始化使用，已存在单位直接返回
-		if ((isset(self::$_rate[POLY][1][$DListID])) or (isset(self::$_rate[MEAT][1][$DListID])) or (isset(self::$_rate[BONE][1][$DListID]))){
-		    
-		}else{
-			$opt = ConstructionDlinkedListOpt::getCode_from_DlinkedList($DListID);
-			
-			if (POLY == $att){
-			    $ret[BONE] = 2;
-				$ret[MEAT] = 2;
-			}elseif (BONE == $att){
-				$ret[MEAT] = 2;
-				$ret[BONE] = 1;				
-			}elseif (SOUL == $att){
-			    $ret[BONE] = 1;
-				$ret[MEAT] = 1;
-			}
+		if (!isset(self::$_done_idx[$DListID])){
 
-			$ret[POLY] = self::extendRate(POLY,$opt);
+			self::$_done_idx[$DListID] = true;
 			
-            if ($ret[POLY])
-				self::setRate(POLY,$DListID,$ret[POLY] + $extra[POLY]);
-			if ($ret[BONE])
-				self::setRate(BONE,$DListID,$ret[BONE] + $extra[BONE]);
-            if ($ret[MEAT])
-				self::setRate(MEAT,$DListID,$ret[MEAT] + $extra[MEAT]);
+			// init value
+			$ret[BONE] = self::$_tpl[CTPL_INI][$att][BONE];
+			$ret[MEAT] = self::$_tpl[CTPL_INI][$att][MEAT];
+			$ret[POLY] = self::$_tpl[CTPL_INI][$att][POLY];
+
+			$obj = ConstructionDlinkedListOpt::getCode_from_DlinkedList($DListID);
+			if (false === OrganPoly::get_usable_models($obj)){
+			    $ret[POLY] = 0;
+			}
+			if (isset(self::$_tpl[CTPL_OPT][$obj[OPERATION]])){
+				foreach (self::$_tpl[CTPL_OPT][$obj[OPERATION]] as $k => $v){
+					if ($ret[$k] > 0){
+						$ret[$k] += $v;
+					}
+				}
+			}		
+			
+            self::setRate(POLY,$DListID,$ret[POLY]);
+            self::setRate(BONE,$DListID,$ret[BONE]);
+            self::setRate(MEAT,$DListID,$ret[MEAT]);
 		}
 		return $ret;
 	}
@@ -163,28 +190,7 @@ class Character{
 		}
 		return $ret;
 	}
-
-
-    //根据 ../templates/charater.tpl.php 模板解析出扩展增加 Rate
-	private static function extendRate($type,$obj){
-		$exRate = 0;
-		if (POLY === $type){		 
-			
-		//var_dump ($obj[OPERATION]);
-			if (false !== OrganPoly::get_usable_models($obj)){ //存在对应的Poly Tpl				
-			    $exRate ++;
-				if (isset(self::$_tpl[CTPL_OPT][POLY][$obj[OPERATION]])){
-				    $exRate += self::$_tpl[CTPL_OPT][POLY][$obj[OPERATION]];
-				}
-
-			}else{
-			    //var_dump ($obj);
-			}
-		}
-		return $exRate;	
-	}
-    
-	//设置优先级
+	// 设置优先级
 	private static function setRate($organ,$id,$rate){
 	    for ($i=1;$i<=9;$i++){
 		    if ($rate >= $i){
@@ -195,8 +201,7 @@ class Character{
 			    break;
 			}
 		}
-	}
-
+	}	
 }
 
 ?>

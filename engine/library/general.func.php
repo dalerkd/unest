@@ -59,7 +59,14 @@ class GeneralFunc{
 		return true;
 	}
 
-
+    /////////////////////////////////////////////////////
+	public static function check_value($value,$func = false){
+		if (false === $func){
+			return ((isset($value)) and ($value));
+		}else{
+			return ((isset($value)) and ($func($value)));
+		}
+	}
 	/////////////////////////////////////////////////////
 	//统计运行时间
 	private static $_stime = 0;
@@ -81,11 +88,13 @@ class GeneralFunc{
 	//根据usable前后stack确定指令的stack环境(可用or 不可用)
 	public static function soul_stack_set(&$code,$usable){
 		foreach ($code as $a => $b){
-			if ((true !== $usable[$a][P][STACK]) or (true !== $usable[$a][N][STACK])){
-				$code[$a][STACK] = false;
-			}else{
-				$code[$a][STACK] = true;
-			}		
+			if (is_array($b)){
+				if ((true !== $usable[$a][P][STACK]) or (true !== $usable[$a][N][STACK])){
+					$code[$a][STACK] = false;
+				}else{
+					$code[$a][STACK] = true;
+				}		
+			}
 		}
 	}
 
@@ -165,7 +174,7 @@ class GeneralFunc{
 	public static function is_effect_ipsp($asm,$rule = 1,$sp_define = false){
 
 
-		global $stack_pointer_reg;
+
 	
 
 		
@@ -194,7 +203,7 @@ class GeneralFunc{
 						continue;
 					}
 					if ('r' === $asm[P_TYPE][$a]){
-						if (Instruction::getGeneralRegIndex($b) == $stack_pointer_reg){
+						if (Instruction::getGeneralRegIndex($b) == STACK_POINTER_REG){
 							return true;
 						}
 					}

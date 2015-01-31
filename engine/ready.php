@@ -19,7 +19,7 @@ Instruction::init();
 
 //////////////////////////////////////////
 //堆栈指针 寄存器
-$stack_pointer_reg = 'ESP';
+define ('STACK_POINTER_REG','ESP');
 
 //////////////////////////////////////////
 //捕获超时
@@ -28,6 +28,9 @@ register_shutdown_function('shutdown_except');
 
 //////////////////////////////////////////
 //同时支持$_GET/$_POST/命令行输入 的参数
+if (!isset($argv)){
+	$argv = array();
+}
 CfgParser::get_params($argv);
 
 if (!GeneralFunc::LogHasErr()){
@@ -222,7 +225,7 @@ if (!GeneralFunc::LogHasErr()){
 		foreach ($z as $a => $b){
 			if (is_array($myTables['RelocArray'][$a])){
 				foreach ($myTables['RelocArray'][$a] as $c => $d){
-					if (((20 === $d['Type']) && (true === $d['isLabel'])) || ((6 === $d['Type']) && (!$d['isLabel']))){
+					if (((20 === $d['Type']) and (isset($d['isLabel'])) and (true === $d['isLabel'])) or (( 6 === $d['Type']) and ((!isset($d['isLabel'])) or (!$d['isLabel'])))){
 					    $garble_rel_info[$a][$c][0] = $d;
 					}else{
 						unset ($myTables['CodeSectionArray'][$a]);						
@@ -322,7 +325,7 @@ if (!GeneralFunc::LogHasErr()){
 		    $soul_writein_Dlinked_List = array();
 			$s_w_Dlinked_List_index = 0;
 			$prev = false;	
-			$c_solid_jmp_array = $solid_jmp_array[$sec];
+			$c_solid_jmp_array = isset($solid_jmp_array[$sec])?$solid_jmp_array[$sec]:NULL;
 			OrgansOperator::init($sec);
 			$lp_asm_result = count($StandardAsmResultArray[$sec]) + 1;
 
@@ -375,13 +378,13 @@ if (!GeneralFunc::LogHasErr()){
 				$c_list = $soul_writein_Dlinked_List_Total[$sec_id]['list'][0]; //起始位默认是0
 				while (true){					  
                     $f = $c_list[C];				    
-					if (true === $soul_usable[$sec_id][$f][P][STACK]){ //堆栈有效
-					    unset($soul_usable[$sec_id][$f][P][NORMAL_WRITE_ABLE][$stack_pointer_reg]);
-                        $soul_forbid[$sec_id][$f][P][NORMAL][$stack_pointer_reg][32] = true;
+					if (isset($soul_usable[$sec_id][$f][P][STACK])){ //堆栈有效
+					    unset($soul_usable[$sec_id][$f][P][NORMAL_WRITE_ABLE][STACK_POINTER_REG]);
+                        $soul_forbid[$sec_id][$f][P][NORMAL][STACK_POINTER_REG][32] = true;
 					}
-					if (true === $soul_usable[$sec_id][$f][N][STACK]){ //堆栈有效
-					    unset($soul_usable[$sec_id][$f][N][NORMAL_WRITE_ABLE][$stack_pointer_reg]);
-                        $soul_forbid[$sec_id][$f][N][NORMAL][$stack_pointer_reg][32] = true;
+					if (isset($soul_usable[$sec_id][$f][N][STACK])){ //堆栈有效
+					    unset($soul_usable[$sec_id][$f][N][NORMAL_WRITE_ABLE][STACK_POINTER_REG]);
+                        $soul_forbid[$sec_id][$f][N][NORMAL][STACK_POINTER_REG][32] = true;
 					}
 					if (isset($c_list[N])){
 						$c_list = $soul_writein_Dlinked_List_Total[$sec_id]['list'][$c_list[N]];
@@ -524,7 +527,7 @@ if (!GeneralFunc::LogHasErr()){
 			$rdy_output['rel_jmp_pointer']  = $rel_jmp_pointer;
 			$rdy_output['rel_jmp_switcher'] = $rel_jmp_switcher;
 
-			file_put_contents($rdy_file,serialize($rdy_output)); 
+			file_put_contents($rdy_file,serialize($rdy_output)); 			
 		}
 
 		if (defined('DEBUG_ECHO')){

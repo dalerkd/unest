@@ -12,7 +12,7 @@ class OrganBone{
 	private static $_bone_model_index;
 	private static $_bone_model_index_multi;
 
-    private static $_bone_multi_max_size;
+    private static $_bone_multi_max_size = BONE_MULTI_MAX_SIZE;
 
 	private static $_delay_remove;    //待删除(原始label 多通道后)
 
@@ -21,12 +21,19 @@ class OrganBone{
 	private static $_multi_bone_map;      //多通道 DListID 对应关系
 
     public static function init(){
-		require dirname(__FILE__)."/../templates/bone.tpl.php";
-	    //self::$_index = 1;
-		self::$_bone_model_index       = $bone_model_index;
-		self::$_bone_model_index_multi = $bone_model_index_multi;
-		self::$_bone_model_repo        = $bone_model_repo;
-		self::$_bone_multi_max_size    = $bone_multi_max_size;
+        $cf = @file_get_contents(dirname(__FILE__)."/../templates/bone.tpl");
+        if ($cf == false){
+			GeneralFunc::LogInsert('fail to open bone templates file: '.dirname(__FILE__)."/../templates/bone.tpl",WARNING);
+		}else{
+			$tmp = unserialize($cf);//反序列化，并赋值  
+			if (BONE_TPL_VER !== $tmp['version']){
+			    GeneralFunc::LogInsert('unmatch bone template version: ('.BONE_TPL_VER.' !== '.$tmp['version'].') '.dirname(__FILE__)."/../templates/bone.tpl",WARNING);
+			}else{
+				self::$_bone_model_index       = $tmp['index'];
+				self::$_bone_model_index_multi = $tmp['m_index'];
+				self::$_bone_model_repo        = $tmp['repo'];				
+			}
+		}
 	}
 
 	//清除指定 usable中 影响 ipsp的单位 (根据 双向链表 索引 开始 -> 结束 )
@@ -389,7 +396,9 @@ class OrganBone{
 		//var_dump ($copy);
 		//var_dump ($c_bone);
 		//var_dump ($soul_position);
-		echo "<br>*****************************************<br>";
+		if (defined('DEBUG_ECHO') && defined('BONE_DEBUG_ECHO')){
+			echo "<br>*****************************************<br>";
+		}
 		//修改 链表，把骨架加入进去
 
 		$c_bone_list_start = ConstructionDlinkedListOpt::getDlinkedListIndex();
@@ -620,7 +629,7 @@ class OrganBone{
 				}
 			}
 		}
-		if (defined('DEBUG_ECHO')){
+		if (defined('DEBUG_ECHO') && defined('BONE_DEBUG_ECHO')){
 			DebugShowFunc::my_shower_05 ($c_bone_model,$bone_obj,$stack_unusable,$ret,$conflict_position);
 		}
 		return $ret;
@@ -654,7 +663,6 @@ class OrganBone{
 		self::$_multi_bone_unit_rate = array();
 		self::$_multi_bone_map       = array();
 
-
 		if (count($bone_obj) <= self::$_bone_multi_max_size){
 			$c_bone_model_index = self::$_bone_model_index_multi;
 		}else{ //too much obj to use multi bone templates.
@@ -671,7 +679,9 @@ class OrganBone{
 		
 		$x = array_rand($c_bone_model_index);
 		$z = $c_bone_model_index[$x];
-		echo "<br> bone repo index: $z ";
+		if (defined('DEBUG_ECHO') && defined('BONE_DEBUG_ECHO')){
+			echo "<br> bone repo index: $z ";
+		}
 		//$z = 2; //测试 多通道，强制指定
 		if ($z){
 			if (self::collect_usable_bone_model ($bone_obj,$last_ipsp,self::$_bone_model_repo[$z])){ //骨架出错,代表 骨架模块 有问题	

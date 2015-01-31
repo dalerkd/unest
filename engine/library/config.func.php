@@ -345,11 +345,13 @@ class CfgParser{
 				
 				if (false === $preprocess){
 					//有configure 未定义 section,放到$all_configure_array数组最后，等待global扩展
-					foreach ($sec_name as $c_name => $v){
-						if (!isset($section_array[$c_name])){
-							$all_configure_array[$index] = array();
-							$section_array[$c_name] = $index;
-							$index ++;
+					if (is_array($sec_name)){
+						foreach ($sec_name as $c_name => $v){
+							if (!isset($section_array[$c_name])){
+								$all_configure_array[$index] = array();
+								$section_array[$c_name] = $index;
+								$index ++;
+							}
 						}
 					}
 					//configure中存在，单目标文件中不存在的section name
@@ -364,18 +366,20 @@ class CfgParser{
 					self::global_configure_extended ($all_configure_array,$global_array);
 
 					//分配configure 内容，返回
-					foreach ($sec_name as $c_name => $v){
-						$i = $section_array[$c_name];
-						self::$_user_config[$c_name]            = $all_configure_array[$i]['unprotect'];
-						self::$_user_config[$c_name]['protect'] = $all_configure_array[$i]['protect'];
-						if (true === $all_configure_array[$i]['stack_usable']){
-							self::$_user_config[$c_name]['stack_usable'] = true;
-						}
-						foreach ($v as $sec_id){
-							self::$_user_cnf[$sec_id]              = $all_configure_array[$i];
-							self::$_user_strength[$sec_id]  = $all_configure_array[$i]['strength'];
-						}
-					}		
+					if (is_array($sec_name)){
+						foreach ($sec_name as $c_name => $v){
+							$i = $section_array[$c_name];
+							self::$_user_config[$c_name]            = $all_configure_array[$i]['unprotect'];
+							self::$_user_config[$c_name]['protect'] = $all_configure_array[$i]['protect'];
+							if (true === $all_configure_array[$i]['stack_usable']){
+								self::$_user_config[$c_name]['stack_usable'] = true;
+							}
+							foreach ($v as $sec_id){
+								self::$_user_cnf[$sec_id]              = $all_configure_array[$i];
+								self::$_user_strength[$sec_id]  = $all_configure_array[$i]['strength'];
+							}
+						}		
+					}
 				}
 				return true;
 			}

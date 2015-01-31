@@ -14,9 +14,18 @@ class OrganPoly{
 
     /////////////////////////////////////////////
 	public static function init(){
-	    require dirname(__FILE__)."/../templates/poly.tpl.php";
-        self::$_poly_model_index = $poly_model_index;
-		self::$_poly_model_repo  = $poly_model_repo;
+		$cf = @file_get_contents(dirname(__FILE__)."/../templates/poly.tpl");
+        if ($cf == false){
+			GeneralFunc::LogInsert('fail to open poly templates file: '.dirname(__FILE__)."/../templates/poly.tpl",WARNING);
+		}else{
+			$tmp = unserialize($cf);//反序列化，并赋值  
+			if (POLY_TPL_VER !== $tmp['version']){
+			    GeneralFunc::LogInsert('unmatch poly template version: ('.POLY_TPL_VER.' !== '.$tmp['version'].') '.dirname(__FILE__)."/../templates/poly.tpl",WARNING);
+			}else{
+			    self::$_poly_model_index = $tmp['index'];
+				self::$_poly_model_repo  = $tmp['repo'];
+			}
+		}
 	}
 
 	
@@ -211,7 +220,7 @@ class OrganPoly{
 								$x = $poly_model[USABLE][$z][N][MEM_OPT_ABLE];
 								foreach ($x as $t => $u){
 									if (self::is_same_mem($rand_result[$v],$all_valid_mem_opt_index[$u][CODE])){
-																			echo "   same";
+																			//echo "   same";
 											unset ($poly_model[USABLE][$z][N][MEM_OPT_ABLE][$t]);                                                                     
 									}
 								}                                               
@@ -300,9 +309,11 @@ class OrganPoly{
 			//检查new stack 是否冲突
 			if (true !== $org[STACK]){			
 				if (true === self::$_poly_model_repo[$obj][$b]['new_stack']){
-					echo "<font color=red>stack conflict!";
-					var_dump ($usable_poly_model[$a]);
-					echo '</font>';
+					if (defined('DEBUG_ECHO') && defined ('POLY_DEBUG_ECHO')){
+						echo "<font color=red>stack conflict!";
+						var_dump ($usable_poly_model[$a]);
+						echo '</font>';
+					}
 					unset($usable_poly_model[$a]);
 					continue;
 				}		    
@@ -563,7 +574,7 @@ class OrganPoly{
     public static function get_usable_models($obj){
         global $pattern_reloc;
 		global $c_rel_info;
-		global $stack_pointer_reg;
+
 	
 
 	    $ret = false;
@@ -581,7 +592,7 @@ class OrganPoly{
 							continue;
 						}
 						//r 区分出为堆栈指针的寄存器 's'
-						if (Instruction::getGeneralRegIndex($obj[PARAMS][$a]) == $stack_pointer_reg){
+						if (Instruction::getGeneralRegIndex($obj[PARAMS][$a]) == STACK_POINTER_REG){
 							$b = 's';
 						}
 					}
@@ -748,7 +759,7 @@ class OrganPoly{
 
 			self::$_index ++;
 
-			if (defined('DEBUG_ECHO')){
+			if (defined('DEBUG_ECHO') && defined ('POLY_DEBUG_ECHO')){
 				DebugShowFunc::my_shower_03($obj,$insert_List_index,$c_poly_result);
 			}
 		}	
