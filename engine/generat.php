@@ -211,6 +211,7 @@ foreach ($CodeSectionArray as $sec => $body){
 	//
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	//根据 双向链表 信息 初始化 character.Rate
+	Character::flushUnits();
 	foreach ($soul_writein_Dlinked_List_Total[$sec]['list'] as $a => $b){
 		Character::initUnit($a,SOUL);
 	}	
