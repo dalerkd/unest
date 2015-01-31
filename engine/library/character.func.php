@@ -83,6 +83,12 @@ class Character{
 			}
 		}
 	}
+	// 清已处理 记录
+	public static function flushUnits(){
+		self::$_done_idx      = array();
+		self::$_rate          = array();
+		self::$_rollback_rate = array();
+	}
 
 	//单位初始化
 	//$DListID:  链表编号
@@ -106,6 +112,7 @@ class Character{
 			if (false === OrganPoly::get_usable_models($obj)){
 			    $ret[POLY] = 0;
 			}
+
 			if (isset(self::$_tpl[CTPL_OPT][$obj[OPERATION]])){
 				foreach (self::$_tpl[CTPL_OPT][$obj[OPERATION]] as $k => $v){
 					if ($ret[$k] > 0){
