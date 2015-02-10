@@ -575,8 +575,6 @@ class CfgParser{
 	//
 	public static function reconfigure_soul_usable ($sec_name,$soul_writein_Dlinked_List_Total,&$soul_usable,$soul_forbid){
 		global $StandardAsmResultArray;
-		global $all_valid_mem_opt_index;
-		global $avmoi_ptr;
 
 		foreach ($sec_name as $a => $b){	    
 			if (empty(self::$_user_config[$a])){
@@ -591,21 +589,19 @@ class CfgParser{
 					if (true === $c_define['protect']['thread_memory']){   //禁止所有内存地址 可写入 属性
 						if (is_array($soul_usable[$d][$f][P][MEM_OPT_ABLE])){
 							foreach ($soul_usable[$d][$f][P][MEM_OPT_ABLE] as $z => $y){
-								if (1 < $all_valid_mem_opt_index[$y][OPT]){
-									$all_valid_mem_opt_index[$avmoi_ptr] = $all_valid_mem_opt_index[$y];
-									$all_valid_mem_opt_index[$avmoi_ptr][OPT] &= 1;
-									$soul_usable[$d][$f][P][MEM_OPT_ABLE][$z] = $avmoi_ptr;
-									$avmoi_ptr ++;
+								if (ValidMemAddr::is_writable($y)){
+									$tmp = ValidMemAddr::get($y);
+									$tmp[OPT] &= 1;									
+									$soul_usable[$d][$f][P][MEM_OPT_ABLE][$z] = ValidMemAddr::append($tmp);
 								}
 							}
 						}
 						if (is_array($soul_usable[$d][$f][N][MEM_OPT_ABLE])){
 							foreach ($soul_usable[$d][$f][N][MEM_OPT_ABLE] as $z => $y){
-								if (1 < $all_valid_mem_opt_index[$y][OPT]){
-									$all_valid_mem_opt_index[$avmoi_ptr] = $all_valid_mem_opt_index[$y];
-									$all_valid_mem_opt_index[$avmoi_ptr][OPT] &= 1;
-									$soul_usable[$d][$f][N][MEM_OPT_ABLE][$z] = $avmoi_ptr;
-									$avmoi_ptr ++;
+								if (ValidMemAddr::is_writable($y)){
+									$tmp = ValidMemAddr::get($y);
+									$tmp[OPT] &= 1;
+									$soul_usable[$d][$f][N][MEM_OPT_ABLE][$z] = ValidMemAddr::append($tmp);
 								}
 							}
 						}
@@ -646,7 +642,7 @@ class CfgParser{
 					}
 					///////////////////////////////////////////////////////
 					//
-					if (isset($c_list[N])){
+					if (false !== $c_list[N]){
 						$c_list = $soul_writein_Dlinked_List_Total[$d]['list'][$c_list[N]];
 					}else{
 						break;

@@ -304,9 +304,9 @@ class OrganMeat{
     }	
 	// mem 可用方案数组 中间表 (readme.meat.txt.2014/12/?) 生成
 	private static function gen_mem_scheme_ready($inst_id,$origin_units,$m_param){
-		 $tmp = array();
-		 $eff[$inst_id] = self::$_param_num;
-		 foreach ($m_param as $b){
+		$tmp = array();
+		$eff[$inst_id] = self::$_param_num;
+		foreach ($m_param as $b){
 		 	$results = array();	 	
 		 	self::genAllCombineArray(array(), $b, $results);
 		 	foreach ($results as $c){
@@ -317,7 +317,7 @@ class OrganMeat{
 		 		$c_array['eff'] = $eff;
 		 		self::$_mem_scheme_ready[] = $c_array;
 		 	}
-		 }
+		}
 	}	
 	// 检查是否有指定内存地址可用 （位数遍历）
 	private static function seek_mem_usable($bits,$reg_num,$direct,$access,$origin_units,$inst_id){
@@ -403,16 +403,15 @@ class OrganMeat{
 		}		
 	}
     // 重构 可用内存地址数组
-	private static function get_mem_access($c_usable,$d){
-        global $all_valid_mem_opt_index;
-		
+	private static function get_mem_access($c_usable,$d){	
 		if (isset($c_usable[$d][MEM_OPT_ABLE])){
 		    foreach ($c_usable[$d][MEM_OPT_ABLE] as $a){
-				if ($all_valid_mem_opt_index[$a][OPT] > 1){
-				    self::$_mem_writable_array[$d][$a] = $all_valid_mem_opt_index[$a];
+		    	// 可写必可读
+				self::$_mem_readable_array[$d][$a] = ValidMemAddr::get($a);
+				if (ValidMemAddr::is_writable($a)){
+				    self::$_mem_writable_array[$d][$a] = self::$_mem_readable_array[$d][$a];
 				}
-				// 可写必可读
-				self::$_mem_readable_array[$d][$a] = $all_valid_mem_opt_index[$a];				
+				
 			}
 		}
 	}
@@ -715,16 +714,16 @@ class OrganMeat{
 	}
 	// 生成有效内存地址
 	private static function genValidMemAddr($effects,$access,$bit,$usable,&$P_M_REG,&$REL){
-		global $all_valid_mem_opt_index;		
 		global $c_rel_info;
 		$mem_array = array();
 		foreach ($usable[MEM_OPT_ABLE] as $i){
-			if ($all_valid_mem_opt_index[$i][BITS] >= $bit){
-				if ($all_valid_mem_opt_index[$i][OPT] >= $access){
+			$mem = ValidMemAddr::get($i);
+			if ($mem[BITS] >= $bit){
+				if ($mem[OPT] >= $access){
 					$flag = true;
 					foreach ($effects as $reg){
 						if (isset(self::$_reg_allot_result[$reg])){
-							if (false === array_search(self::$_reg_allot_result[$reg],$all_valid_mem_opt_index[$i][REG])){
+							if (false === array_search(self::$_reg_allot_result[$reg],$mem[REG])){
 								$flag = false;
 								break;
 							}
@@ -740,24 +739,27 @@ class OrganMeat{
 			}
 		}
 		if (!empty($mem_array)){
-			shuffle ($mem_array);
-			if (isset($all_valid_mem_opt_index[$mem_array[0]])){
+			$mKey = array_rand ($mem_array);
+			$mIdx = $mem_array[$mKey];
+			$mem = ValidMemAddr::get($mIdx);
+			if (isset($mem)){
 				// 内存地址 含寄存器
-				if (isset($all_valid_mem_opt_index[$mem_array[0]][REG])){
-					foreach ($all_valid_mem_opt_index[$mem_array[0]][REG] as $a){
+				if (isset($mem[REG])){
+					foreach ($mem[REG] as $a){
 						$P_M_REG[$a] = 1;
 					}
 				}
 				// 内存地址 含 重定位信息
-				if (isset($all_valid_mem_opt_index[$mem_array[0]][REL])){
-					if (GenerateFunc::reloc_inc_copy($all_valid_mem_opt_index[$mem_array[0]][CODE],$old,$new)){
-						$all_valid_mem_opt_index[$mem_array[0]][CODE] = str_replace(UNIQUEHEAD.'RELINFO_'.$old[0].'_'.$old[1].'_'.$old[2],UNIQUEHEAD.'RELINFO_'.$old[0].'_'.$old[1].'_'.$new,$all_valid_mem_opt_index[$mem_array[0]][CODE]);
+				if (isset($mem[REL])){
+					if (GenerateFunc::reloc_inc_copy($mem[CODE],$old,$new)){
+						$mem[CODE] = str_replace(UNIQUEHEAD.'RELINFO_'.$old[0].'_'.$old[1].'_'.$old[2],UNIQUEHEAD.'RELINFO_'.$old[0].'_'.$old[1].'_'.$new,$mem[CODE]);					
+						ValidMemAddr::set($mIdx,$mem);
 						$REL['i'] = $old[1];
 						$REL[C] = $new;
-						$c_rel_info[$old[1]][$new] = $c_rel_info[$old[1]][$old[2]];								    
+						$c_rel_info[$old[1]][$new] = $c_rel_info[$old[1]][$old[2]];						
 					}
 				}
-				return $all_valid_mem_opt_index[$mem_array[0]][CODE];
+				return $mem[CODE];
 			}			
 		}
 		return false;
@@ -848,13 +850,15 @@ class OrganMeat{
 		}		
 		return true;
 	}
+	// 插入meat_result, offered to debug func
+	public static function append($result){
+	    OrgansOperator::Set(MEAT,self::$_index,$result);
+		$ret = self::$_index;
+		self::$_index ++;
+		return $ret;
+	}
 	// 完成meat 单位的最终构建(参数,usable)
-	private static function genMeats($objs,$usable,$direct){		
-		// echo "<br>###########################<br>";		
-		// var_dump ($direct);
-		// var_dump ($objs);
-		// var_dump ($usable);
-		// $c_opt = self::$_IDX[self::$_C_ARRAY_ID]['OPT'][self::$_INST[self::$_C_ARRAY_ID][$a]['OPERATION']];		
+	private static function genMeats($objs,$usable){		
 		foreach ($objs as $c_obj){
 			if (0 === self::$_meat_units_status[$c_obj]){			
 				if (false !== self::genInstruction($c_obj,$usable)){				
@@ -863,8 +867,7 @@ class OrganMeat{
 					// 对结果进行stack可用状态设置(根据usable)
 					GeneralFunc::soul_stack_set(self::$_meat_units[$c_obj][CODE],self::$_meat_units[$c_obj][USABLE]);
 					// insert into MeatList
-					OrgansOperator::Set(MEAT,self::$_index,self::$_meat_units[$c_obj]);
-					self::$_index ++;
+					self::append(self::$_meat_units[$c_obj]);					
 				}else{ // gen Inst fail
 					self::$_meat_units_status[$c_obj] = 8;
 				}
@@ -1007,7 +1010,7 @@ class OrganMeat{
 
         // 生成 最终指令
         $start_index = self::$_index;
-        self::genMeats($front_index ,$c_usable[P],P);
+        self::genMeats($front_index ,$c_usable[P]);
         if ($start_index < self::$_index){
         	// var_dump (OrgansOperator::Printer());
         	// var_dump (self::$_meat_units);
@@ -1017,7 +1020,7 @@ class OrganMeat{
         }
 
         $start_index = self::$_index;
-        self::genMeats($behind_index,$c_usable[N],N);
+        self::genMeats($behind_index,$c_usable[N]);
         if ($start_index < self::$_index){
         	// var_dump (OrgansOperator::Printer());
         	// echo "<br>fuck.N: $start_index - ".self::$_index;

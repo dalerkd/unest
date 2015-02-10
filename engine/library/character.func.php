@@ -108,7 +108,7 @@ class Character{
 			$ret[MEAT] = self::$_tpl[CTPL_INI][$att][MEAT];
 			$ret[POLY] = self::$_tpl[CTPL_INI][$att][POLY];
 
-			$obj = ConstructionDlinkedListOpt::getCode_from_DlinkedList($DListID);
+			$obj = GeneralFunc::getCode_from_DlinkedList($DListID);
 			if (false === OrganPoly::get_usable_models($obj)){
 			    $ret[POLY] = 0;
 			}

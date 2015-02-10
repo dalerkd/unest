@@ -13,7 +13,8 @@ define ('CHARA_MEAT_DIRTY',0);          // 血肉生成 容许脏构建 1; 不�
 define ('CHARA_MEAT_MEM_PREFER_MAX',3); // 血肉生成 内存操作 相对于普通指令的优先权重 - MAX
 define ('CHARA_MEAT_MEM_PREFER_MIN',1); // 血肉生成 内存操作 相对于普通指令的优先权重 - MIN
 
-define ('CHARA_RELOC_INT',10); // 各organ生成时，重定位数占整数(即生成一个重定位数来作为整数)的比例 = (1/CHARA_RELOC_INT)
+define ('CHARA_RELOC_INT',10); 		// 各organ生成时，重定位数占整数(即生成一个重定位数来作为整数)的比例 = (1/CHARA_RELOC_INT)
+define ('CHARA_MAX_MEAT_DEEP',10);  // SUB MEAT 最大深度
 
 // character 优先级加(减)权级 - CTPL_OPT 根据指令
 

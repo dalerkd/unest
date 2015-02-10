@@ -1,20 +1,15 @@
 <?php 
 
 require dirname(__FILE__)."/include/common.inc.php";
-
 require dirname(__FILE__)."/library/ready.func.php";
 require dirname(__FILE__)."/library/general.func.php";
 require dirname(__FILE__)."/library/preprocess.func.php";
-
 require dirname(__FILE__)."/library/data.construction.php";
-
 require dirname(__FILE__)."/library/config.func.php";
-
 require dirname(__FILE__)."/library/rel.jmp.func.php";
-
-require_once dirname(__FILE__)."/../nasm.inc.php";
-
 require dirname(__FILE__)."/library/instruction.func.php";
+require dirname(__FILE__)."/library/mem.func.php";
+require_once dirname(__FILE__)."/../nasm.inc.php";
 Instruction::init();
 
 //////////////////////////////////////////
@@ -237,20 +232,21 @@ if (!GeneralFunc::LogHasErr()){
 		}
 
 		//
-		$StandardAsmResultArray = array();	//保存 标准化后 的代码  [line_number] => array(
-											//                                             'PREFIX'[] => 前缀
-											//                                             'OPERATION'=> 指令
-											//                                             'PARAMS'[] => array ( 参数
-											//                                                               '0' => 'eax';
-											//                                                               '1' => '1'
-											//                                                               '2' => '[eax+0x0]'
-											//                                                           )
-											//                                             'P_TYPE'[] => array ( 参数类型
-											//                                                               '0' => 'r','1' => 'i','2' => 'm'
-											//                                                           )
-											//                                             'P_BITS'[] => array ( 参数位数
-											//                                                               '0' => 32, '1' => 0 //整数无位数, '2' => 32
-											//                                                           )
+		$StandardAsmResultArray = array();	//保存 标准化后 的代码  
+										 	//[line_number] => array(
+                                            // 'PREFIX'[] => 前缀
+                                            // 'OPERATION'=> 指令
+                                            // 'PARAMS'[] => array ( 参数
+                                            //                   '0' => 'eax';
+                                            //                   '1' => '1'
+                                            //                   '2' => '[eax+0x0]'
+                                            //               )
+                                            // 'P_TYPE'[] => array ( 参数类型
+                                            //                   '0' => 'r','1' => 'i','2' => 'm'
+                                            //               )
+                                            // 'P_BITS'[] => array ( 参数位数
+                                            //                   '0' => 32, '1' => 0 //整数无位数, '2' => 32
+                                            //               )
 
 
 		
@@ -386,7 +382,7 @@ if (!GeneralFunc::LogHasErr()){
 					    unset($soul_usable[$sec_id][$f][N][NORMAL_WRITE_ABLE][STACK_POINTER_REG]);
                         $soul_forbid[$sec_id][$f][N][NORMAL][STACK_POINTER_REG][32] = true;
 					}
-					if (isset($c_list[N])){
+					if (false !== $c_list[N]){
 						$c_list = $soul_writein_Dlinked_List_Total[$sec_id]['list'][$c_list[N]];
 					}else{
 						break;
@@ -531,6 +527,7 @@ if (!GeneralFunc::LogHasErr()){
 		}
 
 		if (defined('DEBUG_ECHO')){
+			ValidMemAddr::init($all_valid_mem_opt_index,count($all_valid_mem_opt_index));
 			DebugShowFunc::my_shower_01($myTables['CodeSectionArray'],$StandardAsmResultArray,$exec_thread_list);
 		}
 	}

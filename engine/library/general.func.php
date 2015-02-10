@@ -252,6 +252,18 @@ class GeneralFunc{
 		//var_dump ($new_dynamic_insert);
 		//var_dump ($dynamic_insert);
 		//exit;
-	}
+	}	
+
+	// 获取 链表单位编号 获取 CODE 数组
+	public static function getCode_from_DlinkedList($ListID){
+		$ret  = false;
+		$unit = ConstructionDlinkedListOpt::getDlinkedList($ListID);
+		if (isset($unit[LABEL])){
+		    
+		}else{
+            $ret = OrgansOperator::GetByDListUnit($unit,CODE);
+		}
+		return $ret;
+	} 	
 
 }

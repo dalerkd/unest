@@ -39,8 +39,6 @@ class OrganBone{
 	//清除指定 usable中 影响 ipsp的单位 (根据 双向链表 索引 开始 -> 结束 )
 	private static function remove_ipsp_from_usable_list($start,$end){
 
-		global $all_valid_mem_opt_index;
-
 		$c_lp = $start;		
 		while (true){
 
@@ -53,10 +51,17 @@ class OrganBone{
 				break;
 			}
 			$c_lp = ConstructionDlinkedListOpt::getDlinkedList($c_lp,N);
+			if (false === $c_lp){
+				break;
+			}
 		}
 		
 	}
-
+	// 根据 $soul_writein_Dlinked_List 链表号 获得 该单位的 前(后)usable 数组
+	private static function get_usable_from_DlinkedList($id,$position){
+		$c = ConstructionDlinkedListOpt::getDlinkedList($id);
+        return OrgansOperator::GetByDListUnit($c,USABLE,$position);
+	}
 	// 从灵魂 处 继承骨架的 usable
 	private static function inherit_bone_usable(&$c_bone_result_array,$c_soul_position){
 
@@ -68,15 +73,15 @@ class OrganBone{
 			foreach ($x as $b){
 				if (isset($b['s'])){
 					if (isset($c_soul_position[$b['s']])){
-						$first = ConstructionDlinkedListOpt::get_usable_from_DlinkedList($c_soul_position[$b['s']]['first'],P);
-						$last  = ConstructionDlinkedListOpt::get_usable_from_DlinkedList($c_soul_position[$b['s']]['last'],N);					
+						$first = self::get_usable_from_DlinkedList($c_soul_position[$b['s']]['first'],P);
+						$last  = self::get_usable_from_DlinkedList($c_soul_position[$b['s']]['last'],N);					
 						if (isset($buff)){
 							//echo '<br>buff:';
 							//var_dump ($buff);
 							foreach ($buff as $z){
-								if (isset($z[P])){
+								if ((isset($z[P])) and (false !== $z[P])){
 									$c_bone_result_array[USABLE][$z[P]][P] = $first;
-								}elseif (isset($z[N])){
+								}elseif ((isset($z[N])) and (false !== $z[N])){
 									$c_bone_result_array[USABLE][$z[N]][N] = $first;
 								}
 							}
@@ -152,9 +157,9 @@ class OrganBone{
 		//unset ($copy_buff[$c_lp]);
 		$copy_buff[$c_lp]['302'] = $next;
 		if (false !== $prev)
-			unset ($copy_buff[$prev][N]);
+			$copy_buff[$prev][N] = false;
 		if (false !== $next)
-			unset ($copy_buff[$next][P]);
+			$copy_buff[$next][P] = false;
 
 		if ((false !== $prev)&&(false !== $next)){
 			$copy_buff[$prev][N] = $next;
@@ -190,12 +195,15 @@ class OrganBone{
 			}
 
 			$c_lp = ConstructionDlinkedListOpt::getDlinkedList($c_lp,N);
+			if (false === $c_lp){
+			    break;
+			}
 		}
 		$c_last = $c_lp;
 
 		//去除首个单位 Prev 指针 和 末尾单位 Next 指针
-		unset ($copy_buff[$c_first][P]);
-		unset ($copy_buff[$c_last][N]);
+		$copy_buff[$c_first][P] = false;
+		$copy_buff[$c_last][N]  = false;
 		//副本 和 正本 的标签 部分，2者只保留一处
 		$c_lp = $c_first;
 
@@ -203,7 +211,7 @@ class OrganBone{
 		$dest['last']  = $c_last;
 		while (true){		
 			//echo "b $c_lp !== $c_last ,";
-			if (isset($copy_buff[$c_lp][N])){
+			if (false !== $copy_buff[$c_lp][N]){
 				$next = $copy_buff[$c_lp][N];
 			}else{
 				$next = false;
@@ -251,50 +259,36 @@ class OrganBone{
 	///////////////////////////////////////////////////////////////
 	//副本复制进链表，并完成前后部的链接
 	//    对副本中含有重定位 值的单位，重定位信息副本累加
-	private static function insert_copy_2_list(&$c_prev,$copy,$soul_position){
+	private static function insert_copy_2_list($c_prev,$copy,$soul_position){
 
 		global $c_rel_info;
 		global $sec;
-
 	   
 		$c_lp = $soul_position['first'];
-		while (true){
-            
-			self::$_multi_bone_map[$c_lp][] = ConstructionDlinkedListOpt::getDlinkedListIndex(); //multi bone Map
+		while (true){			
+			$array = $copy[$c_lp];			
 
-			$tmp_multi_bone_poly[] = ConstructionDlinkedListOpt::getDlinkedListIndex();
-			//echo " ,c $c_lp !== ".$soul_position['last'].' , ';
-
-			ConstructionDlinkedListOpt::setDlinkedList($copy[$c_lp],ConstructionDlinkedListOpt::getDlinkedListIndex());
-
-			$c_asm    = OrgansOperator::GetByDListUnit($copy[$c_lp],CODE);
-			$c_usable = OrgansOperator::GetByDListUnit($copy[$c_lp],USABLE);
+			$c_asm    = OrgansOperator::GetByDListUnit($array,CODE);
+			$c_usable = OrgansOperator::GetByDListUnit($array,USABLE);
 
 			if (isset($c_asm[REL])){
-				//var_dump ($soul_writein_Dlinked_List[$s_w_Dlinked_List_index]);
-				//var_dump ($c_asm);
-				//var_dump ($c_usable);
+				if (isset($array[POLY])){
+					unset ($array[POLY]);
+				}
+				if (isset($array[MEAT])){
+					unset ($array[MEAT]);
+				}
 
+				$array[BONE] = self::rel_copy_create($c_asm,$c_usable);
+				$array[C]    = 99;
 
-				ConstructionDlinkedListOpt::unsetDlinkedList(POLY);
-				ConstructionDlinkedListOpt::unsetDlinkedList(MEAT);
-
-				ConstructionDlinkedListOpt::setDlinkedList(self::rel_copy_create($c_asm,$c_usable),ConstructionDlinkedListOpt::getDlinkedListIndex(),BONE);
-
-				ConstructionDlinkedListOpt::setDlinkedList(99,ConstructionDlinkedListOpt::getDlinkedListIndex(),C);
-				//var_dump ($bone_result_array[$soul_writein_Dlinked_List[$s_w_Dlinked_List_index][BONE]][CODE]);
-				//var_dump ($bone_result_array[$soul_writein_Dlinked_List[$s_w_Dlinked_List_index][BONE]][USABLE]);
-				//if (count($c_asm[REL]) > 1){ //测试多个重定位
-				//	var_dump ($c_asm);
-				//}
 				foreach ($c_asm[REL] as $p_number => $p_rel_info){
 					$old_rel_n = $p_number;
 					$old_rel_i = $p_rel_info['i'];
 					$old_rel_c = $p_rel_info[C];
 					$new = GenerateFunc::reloc_inc_copy_naked($old_rel_i,$old_rel_c);
-					//echo "$old_rel_n $old_rel_i $old_rel_c";
 
-					$tmp_tmp = ConstructionDlinkedListOpt::getDlinkedList(ConstructionDlinkedListOpt::getDlinkedListIndex(),BONE);
+					$tmp_tmp = $array[BONE];
 
 					OrgansOperator::Set(BONE,$tmp_tmp,$new,array(CODE,99,REL,$p_number,C));
 					
@@ -302,45 +296,24 @@ class OrganBone{
 					
                     $tmp = OrgansOperator::Get(BONE,$tmp_tmp,CODE,99,PARAMS,$old_rel_n);
 					$tmp = str_replace(UNIQUEHEAD.'RELINFO_'.$sec.'_'.$old_rel_i.'_'.$old_rel_c,UNIQUEHEAD.'RELINFO_'.$sec.'_'.$old_rel_i.'_'.$new,$tmp);
-                    OrgansOperator::Set(BONE,$tmp_tmp,$tmp,array(CODE,99,PARAMS,$old_rel_n));					
-
-					//var_dump ($bone_result_array[$soul_writein_Dlinked_List[$s_w_Dlinked_List_index][BONE]][CODE]);
-					//var_dump ($garble_rel_info[$sec][$old_rel_i][$new]);
-					//echo "**********************<br>";
+                    OrgansOperator::Set(BONE,$tmp_tmp,$tmp,array(CODE,99,PARAMS,$old_rel_n));
 				}
 			}
 
+			$c_prev = ConstructionDlinkedListOpt::appendNewUnit($c_prev,$array);
 
-			ConstructionDlinkedListOpt::insertDlinkedListByIndex($c_prev);
+			self::$_multi_bone_map[$c_lp][] = $c_prev;
 
-			$c_prev = ConstructionDlinkedListOpt::getDlinkedListIndex();
-			if ($c_lp === $soul_position['last']){
-
-				ConstructionDlinkedListOpt::incDlinkedListIndex();
+			if (($c_lp === $soul_position['last']) or (!isset($copy[$c_lp][N])) or (false === $copy[$c_lp][N])){
 				break;
-			}
-			if (!isset($copy[$c_lp][N])){
-				//echo "<br>Fuck...".$c_lp.' === '.$soul_position['last'];
-				//var_dump ($copy);
-				//exit;
-
-				ConstructionDlinkedListOpt::incDlinkedListIndex();
-				break;
-			}
-			$c_lp = $copy[$c_lp][N];		
-
-			ConstructionDlinkedListOpt::incDlinkedListIndex();
+			}			
+			$c_lp = $copy[$c_lp][N];			
 		}
-
-
-		return;
+		return $c_prev;
 	}
 
 	//对骨架进行初始化(label & Jcc)
 	private static function init_bone_model(&$c_bone,$bone_obj){ 
-
-
-	
 
 		$bone_index = self::$_index;
 		self::$_index ++;
@@ -375,7 +348,7 @@ class OrganBone{
 
 				if (ConstructionDlinkedListOpt::issetDlinkedListUnit($soul_position[$a]['last'],N)){
 
-					$c_last = ConstructionDlinkedListOpt::getDlinkedList($soul_position[$a]['last'],N);
+					$c_last = ConstructionDlinkedListOpt::getDlinkedList($soul_position[$a]['last'],N);					
 				}else{
 					$c_last = false;
 				}
@@ -400,49 +373,35 @@ class OrganBone{
 			echo "<br>*****************************************<br>";
 		}
 		//修改 链表，把骨架加入进去
-
-		$c_bone_list_start = ConstructionDlinkedListOpt::getDlinkedListIndex();
+		
 		$c_prev = false;
 
 		if (ConstructionDlinkedListOpt::issetDlinkedListUnit($bone_obj[1],P)){
-
 			$c_prev = ConstructionDlinkedListOpt::getDlinkedList($bone_obj[1],P);
 		}
 		$c_soul_ptr = 1;
-		foreach ($c_bone[CODE] as $a => $b){			    
+		foreach ($c_bone[CODE] as $a => $b){
 			if (true === $b){ //单位
 				if (isset($soul_position[$a]['first'])){ //有效
 					if (isset($copy[$a])){ //副本
-						self::insert_copy_2_list($c_prev,$copy[$a],$soul_position[$a]);
+						$c_prev = self::insert_copy_2_list($c_prev,$copy[$a],$soul_position[$a]);
 					}else{
-						ConstructionDlinkedListOpt::insertDlinkedList($c_prev,$soul_position[$a]['first']);
+						ConstructionDlinkedListOpt::relinkUnit($c_prev,$soul_position[$a]['first']);
 						$c_prev = $soul_position[$a]['last'];
-					}				
+						ConstructionDlinkedListOpt::relinkUnit($c_prev,$c_last);
+					}
 				}
 			}else{            //骨架
-				if (false === $c_prev){ // 整个链表 首个单位，无 'Prev'
-					ConstructionDlinkedListOpt::setListFirstUnit();
-				}else{
-					ConstructionDlinkedListOpt::insertDlinkedListByIndex($c_prev);
-				}
-
-				$c_prev = ConstructionDlinkedListOpt::getDlinkedListIndex();
-
-				ConstructionDlinkedListOpt::setDlinkedList(true,$c_prev,'ipsp');
-
-				ConstructionDlinkedListOpt::setDlinkedList($bone_index,$c_prev,BONE);
-
-				ConstructionDlinkedListOpt::setDlinkedList($a,$c_prev,C);
+				$array = array();
+				$array['ipsp'] = true;
+				$array[BONE]   = $bone_index;
+				$array[C]      = $a;
 				if (isset($b[LABEL])){
-					ConstructionDlinkedListOpt::setDlinkedList($b[LABEL],$c_prev,LABEL);
-				}
-                self::$_bone_units[$c_prev] = $c_prev;
-				ConstructionDlinkedListOpt::incDlinkedListIndex();
+					$array[LABEL] = $b[LABEL];
+				}				
+				$c_prev = ConstructionDlinkedListOpt::appendNewUnit($c_prev,$array);
+				self::$_bone_units[$c_prev] = $c_prev;				
 			}
-		}
-		if (false !== $c_last){
-
-			ConstructionDlinkedListOpt::insertDlinkedList($c_prev,$c_last);
 		}
 
 		//正本中想需要清除的标号
@@ -565,8 +524,8 @@ class OrganBone{
 		}
 	}
 
-	//不冲突? 返回false
-	//  冲突? 返回冲突位置 -> 
+	// 不冲突? 返回false
+	//   冲突? 返回冲突位置 -> 
 	private static function check_bone_stack_conflict($c_bone_model,$bone_obj){
 
 		$i = 0;
@@ -575,13 +534,13 @@ class OrganBone{
 		foreach ($c_bone_model['direct'] as $a => $b){
 			if ($b){
 				$i ++;
-				$tmp = ConstructionDlinkedListOpt::get_unit_by_soul_writein_Dlinked_List($bone_obj[$i]);     //获取指定编号链表的前 or 后可用数组
-				if (true !== $tmp[USABLE][P][STACK]){
+				$tmp = self::get_usable_from_DlinkedList($bone_obj[$i],P);
+				if (true !== $tmp[STACK]){
 					$stack_unusable[$a][P] = true;
 				}				
 				$i = $b;
-				$tmp = ConstructionDlinkedListOpt::get_unit_by_soul_writein_Dlinked_List($bone_obj[$i]); //获取指定编号链表的前 or 后可用数组
-				if (true !== $tmp[USABLE][N][STACK]){
+				$tmp = self::get_usable_from_DlinkedList($bone_obj[$i],N);
+				if (true !== $tmp[STACK]){
 					$stack_unusable[$a][N] = true;
 				}
 			}	    
@@ -682,10 +641,11 @@ class OrganBone{
 		if (defined('DEBUG_ECHO') && defined('BONE_DEBUG_ECHO')){
 			echo "<br> bone repo index: $z ";
 		}
-		//$z = 2; //测试 多通道，强制指定
+		// $z = 2; //测试 多通道，强制指定
 		if ($z){
 			if (self::collect_usable_bone_model ($bone_obj,$last_ipsp,self::$_bone_model_repo[$z])){ //骨架出错,代表 骨架模块 有问题	
                 if (!empty(self::$_multi_bone_map)){ // set character.Rate for 多通道 bone
+                	// var_dump (self::$_multi_bone_map);
 					self::resetRate();	
 				}			
 				foreach (self::$_bone_units as $a){ // bone init character.Rate

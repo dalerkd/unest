@@ -5,6 +5,7 @@
 define ('STACK_POINTER_REG','ESP');
 require dirname(__FILE__)."/include/common.inc.php";
 require dirname(__FILE__)."/library/generate.func.php";
+require dirname(__FILE__)."/library/mem.func.php";
 require dirname(__FILE__)."/library/general.func.php";
 require dirname(__FILE__)."/library/data.construction.php";
 require dirname(__FILE__)."/library/organ.func.php";
@@ -78,19 +79,15 @@ if (!GeneralFunc::LogHasErr()){
 	$garble_rel_info                 = CfgParser::get_rdy('garble_rel_info');
 	$CodeSectionArray                = CfgParser::get_rdy('CodeSectionArray');
 	$soul_usable                     = CfgParser::get_rdy('soul_usable');
-	$soul_forbid                     = CfgParser::get_rdy('soul_forbid');
-	$all_valid_mem_opt_index         = CfgParser::get_rdy('valid_mem_index');
+	$soul_forbid                     = CfgParser::get_rdy('soul_forbid');	
 	$sec_name                        = CfgParser::get_rdy('sec_name');
 	$soul_writein_Dlinked_List_Total = CfgParser::get_rdy('soul_writein_Dlinked_List_Total');
-	$avmoi_ptr                       = CfgParser::get_rdy('valid_mem_index_ptr'); //$all_valid_mem_opt_index 的当前编号
-	$avmoi_ptr ++;
 	$all_valid_mem_opcode_len        = CfgParser::get_rdy('valid_mem_len');
 	$output_type                     = CfgParser::get_rdy('output_type');
 	$ready_preprocess_config         = CfgParser::get_rdy('preprocess_config');   //保护(不进行混淆)设置
 	$dynamic_insert                  = CfgParser::get_rdy('dynamic_insert');      //动态 插入
-
 	$preprocess_sec_name             = CfgParser::get_rdy('preprocess_sec_name'); //预处理阶段收集的操作目标段 名
-
+	ValidMemAddr::init(CfgParser::get_rdy('valid_mem_index'),CfgParser::get_rdy('valid_mem_index_ptr'));
 	//加载输出文件格式 解析器
 	$file_format_parser = dirname(__FILE__)."/IOFormatParser/".$output_type.".IO.php";
 	if (file_exists($file_format_parser)){

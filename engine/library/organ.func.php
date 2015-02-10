@@ -3,7 +3,7 @@
 //维护，操作 Organs 产生的数据结构
 class OrgansOperator{
     private static $_poly_result;
-	private static $_poly_result_reverse;
+	// private static $_poly_result_reverse;
     private static $_bone_result;
     private static $_meat_result;
 	private static $_soul_usable;
@@ -16,7 +16,7 @@ class OrgansOperator{
         global $soul_usable;
 
 	    self::$_poly_result = array();
-		self::$_poly_result_reverse = array();
+		// self::$_poly_result_reverse = array();
 		self::$_bone_result = array();
 		self::$_meat_result = array();
 
@@ -149,12 +149,12 @@ class OrgansOperator{
 	}
 
 	//poly 反向数组
-	public static function SetPolyReverse($i,$k,$v){
-	    self::$_poly_result_reverse[$i][$k] = $v;
-	}
-	public static function GetPolyReverse($i,$k){
-	    return self::$_poly_result_reverse[$i][$k];
-	}
+	// public static function SetPolyReverse($i,$k,$v){
+	//     self::$_poly_result_reverse[$i][$k] = $v;
+	// }
+	// public static function GetPolyReverse($i,$k){
+	//     return self::$_poly_result_reverse[$i][$k];
+	// }
 
 	//生成 organs 处理流程 数组
 	public static function GenOrganProcess($user_strength,$count,$max_strength){

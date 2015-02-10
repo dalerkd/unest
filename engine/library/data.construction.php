@@ -118,7 +118,9 @@ class ConstructionDlinkedListOpt{
 	private static function seekNextObj($c,$target){
 		$objs = array();
 		$objs[1] = $c;
-		while (isset(self::$_soul_writein_Dlinked_List[$c][N])){
+		while (false !== self::$_soul_writein_Dlinked_List[$c][N]){			
+			// var_dump ($c);
+			// var_dump ($target);
 		    $c = self::$_soul_writein_Dlinked_List[$c][N];
 			$objs[] = $c;
             if ($c == $target){
@@ -244,72 +246,27 @@ class ConstructionDlinkedListOpt{
 		}		
 		return false;		
 	}
-	//链条表 首单位 操作 (设置 and 读取)
+	//链条表 首单位 读取
 	public static function readListFirstUnit(){
 	    return self::$_soul_writein_Dlinked_List_start;
 	}
-	// 
-	public static function setListFirstUnit(){
-	    self::$_soul_writein_Dlinked_List_start = self::$_s_w_Dlinked_List_index;
-	}
-
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	//双向链表 $soul_writein_Dlinked_List 及 链表指针 $s_w_Dlinked_List_index 操作函数s
     
-    //链表 插入指针 位置 读取
-	public static function getDlinkedListIndex(){
-	    return  self::$_s_w_Dlinked_List_index;
-	}
-	//链表 插入指针 自增
-	public static function incDlinkedListIndex(){
-	    self::$_s_w_Dlinked_List_index ++;
-	}
-    //判断链表单位是否有效
+    // 判断链表单位是否有效
 	public static function issetDlinkedListUnit($key,$skey){
 	    return (isset(self::$_soul_writein_Dlinked_List[$key][$skey]));
 	}
-	//双向链表 总 单位个数
-	public static function numDlinkedList(){
-	    return count(self::$_soul_writein_Dlinked_List);
+	// 强制重置链表链接
+	public static function relinkUnit($prev,$next){
+		self::linkUnit($prev,$next);	    
+	}		
+	// 链表单位设值
+	public static function setDlinkedList($obj,$key,$value){
+		self::$_soul_writein_Dlinked_List[$obj][$key] = $value;
 	}
-	//双向链表中随机 获取 一 单位
-    public static function getRandDlinkedListUnit(){
-	    return array_rand(self::$_soul_writein_Dlinked_List);
-	}
-	//链表单位清除
-    public static function unsetDlinkedList($key = false){
-	    if (false !== $key){
-			unset (self::$_soul_writein_Dlinked_List[self::$_s_w_Dlinked_List_index][$key]);
-		}else{
-			unset (self::$_soul_writein_Dlinked_List[self::$_s_w_Dlinked_List_index]);
-		}
-	}
-	// 
-    public static function insertDlinkedListByIndex($prev){
-	    self::insertDlinkedList($prev,self::$_s_w_Dlinked_List_index);
-	}
-	//链表插入
-	public static function insertDlinkedList($prev,$next){
-	    self::$_soul_writein_Dlinked_List[$prev][N] = $next;
-        self::$_soul_writein_Dlinked_List[$next][P] = $prev;
-	}
-		
-	//链表单位设值
-	public static function setDlinkedList(){		
-		$arg = func_get_args();
-		$num = func_num_args();        
-		if (2 == $num){
-			self::$_soul_writein_Dlinked_List[$arg[1]] = $arg[0];	
-		}elseif (3 === $num){
-			self::$_soul_writein_Dlinked_List[$arg[1]][$arg[2]] = $arg[0];	
-		}
-	}
-	// 链表读取
-	public static function getDlinkedListTotal(){
-	    return self::$_soul_writein_Dlinked_List;
-	}
-
+	// 读取 链表单位
     public static function getDlinkedList(){
         $arg = func_get_args();
 		$num = func_num_args();
@@ -320,128 +277,55 @@ class ConstructionDlinkedListOpt{
 		}elseif (3 == $num){
 		    return self::$_soul_writein_Dlinked_List[$arg[0]][$arg[1]][$arg[2]];
 		}
-	}
-	////////////////////////////////////////////////////////////////////////////
-	//根据 $soul_writein_Dlinked_List 链表号 获得 该单位的 前(后)usable 数组
-	public static function get_usable_from_DlinkedList($id,$position){
-        return OrgansOperator::GetByDListUnit(self::$_soul_writein_Dlinked_List[$id],USABLE,$position);
 	}	
-	//////////////////////////////////////////////////////////////////////////
-	//摘除 双向 链表 中的 指定单位 (对照 OrganBone::remove_from_DlinkedList)
+	// 摘除 双向 链表 中的 指定单位 
 	public static function remove_from_DlinkedList($c_lp){
 
 		Character::removeRate($c_lp); //清character.Rate
 
-		$prev = false;
-		$next = false;
+		$prev = self::$_soul_writein_Dlinked_List[$c_lp][P];
+		$next = self::$_soul_writein_Dlinked_List[$c_lp][N];
 
-		if (isset(self::$_soul_writein_Dlinked_List[$c_lp][P])){
-			$prev = self::$_soul_writein_Dlinked_List[$c_lp][P];
-		}
-		
-		if (isset(self::$_soul_writein_Dlinked_List[$c_lp][N])){
-			$next = self::$_soul_writein_Dlinked_List[$c_lp][N];
-		}
-
-		//unset ($copy_buff[$c_lp]);
 		self::$_soul_writein_Dlinked_List[$c_lp]['302'] = $next;
 
-		if (false !== $prev)
-			unset (self::$_soul_writein_Dlinked_List[$prev][N]);
-		if (false !== $next)
-			unset (self::$_soul_writein_Dlinked_List[$next][P]);
-
-		if ((false !== $prev)&&(false !== $next)){
-			self::$_soul_writein_Dlinked_List[$prev][N] = $next;
-			self::$_soul_writein_Dlinked_List[$next][P] = $prev;
-		}elseif (false !== $next){ //if Prev == false
-			self::$_soul_writein_Dlinked_List_start = $next;
-		}//elseif (false !== $prev){ //if Next == false 最后一个，直接清除即可
-	}    
-	//////////////////////////////////////////////////////////////////////////////
-	//
-	// 根据 链表号 获得指令名 (Label 返回 下一个(按方向))
-	// 为 亲缘性 服务
-	//
-	public static function get_inst_from_DlinkedList($List_id,$direct){
-
-		$ret = false;
-		$tmp = false; 
-		while (isset(self::$_soul_writein_Dlinked_List[$List_id][LABEL])){ //标签 则按方向取下一个(向上或向下)
-			//echo "<br><font color=red>$List_id: Label -> $direct </font>";
-			//var_dump (self::$_soul_writein_Dlinked_List[$List_id]);
-			if (isset(self::$_soul_writein_Dlinked_List[$List_id][$direct])){
-				$List_id = self::$_soul_writein_Dlinked_List[$List_id][$direct];
-			}else{
-				//echo "<br><font color=red>$List_id: Label -> empty </font>";						
-				return 'empty';
-			}	
-		}
-
-		$ret = OrgansOperator::GetByDListUnit(self::$_soul_writein_Dlinked_List[$List_id],CODE,OPERATION);
-		
-		return $ret;
-	}
-    //获取 链表单位 代码
-	public static function getCode_from_DlinkedList($unit){
-
-		$ret = false;
-		if (isset(self::$_soul_writein_Dlinked_List[$unit][LABEL])){
-		    
-		}else{
-            $ret = OrgansOperator::GetByDListUnit(self::$_soul_writein_Dlinked_List[$unit],CODE);
-		}
-		return $ret;
-	}
-    //根据链表编号获取单位[CODE] and [USABLE]
-	//需要仅对应当前$sec的全局变量 $soul_writein_Dlinked_List / $c_Asm_Result / $c_soul_usable / $meat_result_array / $bone_result_array / $poly_result_array;
-	public static function get_unit_by_soul_writein_Dlinked_List($n){
-
-		$ret = false;
-        
-		$code   = OrgansOperator::GetByDListUnit(self::$_soul_writein_Dlinked_List[$n],CODE);
-		if (false != $code){
-			$ret[CODE] = $code;
-			$ret[USABLE] = OrgansOperator::GetByDListUnit(self::$_soul_writein_Dlinked_List[$n],USABLE);
-		}
-
-		return $ret;
-
-	}
-    //判断是否为原始代码
-	private static function is_soul_unit($array){
-
-		if (isset($array[SOUL])){
-			return true;
-		}
-
-		if ((!isset($array[BONE])) and (!isset($array[MEAT])) and (!isset($array[POLY]))){
-			return true;
-		}
-
-		return false;
+		self::linkUnit($prev,$next);
 	}
 	// 创建一个新的链表单位(内容为$array)并追加到指定链表单位($prev)的后面(作为首单位则设为false),返回新的单位序号
+	// $array          内容应由调用者保证安全
 	public static function appendNewUnit($prev,$array){
-		$c_id = self::$_s_w_Dlinked_List_index;
-		self::$_s_w_Dlinked_List_index ++;
-		self::$_soul_writein_Dlinked_List[$c_id] = $array;
-		$next = false;
+		$c_id = self::newUnit($array);		
 		if (false === $prev){
 			$next = self::$_soul_writein_Dlinked_List_start;
-			self::$_soul_writein_Dlinked_List_start = $c_id;	
-		}else{		
-			if (isset(self::$_soul_writein_Dlinked_List[$prev][N])){
-				$next = self::$_soul_writein_Dlinked_List[$prev][N];
-			}				
-			self::$_soul_writein_Dlinked_List[$c_id][P] = $prev;
-			self::$_soul_writein_Dlinked_List[$prev][N] = $c_id;
+		}elseif (false !== self::$_soul_writein_Dlinked_List[$prev][N]){
+			$next = self::$_soul_writein_Dlinked_List[$prev][N];
+		}else{
+			$next = false;
 		}
-		if (false !== $next){
-			self::$_soul_writein_Dlinked_List[$next][P] = $c_id;
-			self::$_soul_writein_Dlinked_List[$c_id][N] = $next;
-		}
+		self::linkUnit($prev,$c_id);
+		self::linkUnit($c_id,$next);
 		return $c_id;
+	}
+	// 建立一个新单位
+	private static function newUnit($array){
+		$c_id = self::$_s_w_Dlinked_List_index;
+		self::$_s_w_Dlinked_List_index ++;
+		$array[P] = false;
+		$array[N] = false;
+		self::$_soul_writein_Dlinked_List[$c_id] = $array;
+		return $c_id;
+	}
+	// 链接2个前后单位 | false 则作为边界单位,不可皆为false
+	private static function linkUnit($prev,$next){
+		if (false === $prev){
+			self::$_soul_writein_Dlinked_List_start = $next;
+		}else{
+			self::$_soul_writein_Dlinked_List[$prev][N] = $next;
+		}
+		if (false === $next){
+			
+		}else{
+			self::$_soul_writein_Dlinked_List[$next][P] = $prev;
+		}
 	}
 }
 

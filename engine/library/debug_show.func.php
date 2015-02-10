@@ -90,8 +90,8 @@ class DebugShowFunc{
 
 	//显示骨架(预分配方案(ipsp已完成)，以及STACK冲突判断结果)
 	public static function my_shower_05($c_bone_model,$bone_obj,$stack_unusable,$isConflict,$conflict_position){
-		//global $soul_writein_Dlinked_List;
-		$soul_writein_Dlinked_List = ConstructionDlinkedListOpt::getDlinkedListTotal();
+		// global $soul_writein_Dlinked_List;
+		// $soul_writein_Dlinked_List = ConstructionDlinkedListOpt::getDlinkedListTotal();
 		echo "<br>============= 显示骨架(预分配方案(ipsp已完成)，以及STACK冲突判断结果) ============= <br>";
 		
 		if (!$isConflict){
@@ -131,21 +131,24 @@ class DebugShowFunc{
 						}
 						echo '<td>';
 						echo "$z".'</td><td>';
-						echo "$y".'</td><td>';
-						if (isset($soul_writein_Dlinked_List[$y][POLY])){
+						echo "$y".'</td><td>';	
+						$current = ConstructionDlinkedListOpt::getDlinkedList($y);
+						if (isset($current[POLY])){
 						   echo '[多态]';
-						}elseif (isset($soul_writein_Dlinked_List[$y][BONE])){
+						}elseif (isset($current[BONE])){
 						   echo '[骨架]';
-						}elseif (isset($soul_writein_Dlinked_List[$y][MEAT])){
+						}elseif (isset($current[MEAT])){
 						   echo '[血肉]';
 						}else{
 						   echo '[灵魂]';
 						}
 						echo '</td><td>';
-						if (isset($soul_writein_Dlinked_List[$y][LABEL])){
-							var_dump ($soul_writein_Dlinked_List[$y][LABEL]);
+						if (isset($current[LABEL])){
+							var_dump ($current[LABEL]);
 						}
-						$x = ConstructionDlinkedListOpt::get_unit_by_soul_writein_Dlinked_List($y);
+						$jj = ConstructionDlinkedListOpt::getDlinkedList($y);
+						$x[CODE]    = OrgansOperator::GetByDListUnit($jj,CODE);
+						$x[USABLE]  = OrgansOperator::GetByDListUnit($jj,USABLE);
 						var_dump ($x[CODE][OPERATION]);
 						echo '</td><td>';
 						var_dump ($x[CODE][PARAMS]);
@@ -248,7 +251,7 @@ class DebugShowFunc{
 			echo '</td><td>';
 			var_dump ($rel_jmp_pointer[$c_unit]);
 			echo '</td></tr>';
-			if (!isset($soul_writein_Dlinked_List[$c_unit][N])){
+			if (false === $soul_writein_Dlinked_List[$c_unit][N]){
 				break;
 			}
 			$c_unit = $soul_writein_Dlinked_List[$c_unit][N];
@@ -260,18 +263,16 @@ class DebugShowFunc{
 
 
 	//显示多态 (支持 随机的 强度 表示),取代 function my_shower_02
-	public static function my_shower_03($org_List_index,$poly_List_index,$c_poly_array){
-		//global $soul_writein_Dlinked_List;
-		$soul_writein_Dlinked_List = ConstructionDlinkedListOpt::getDlinkedListTotal();
-		
-		global $all_valid_mem_opt_index;
+	public static function my_shower_03($org_List_index,$c_poly_array){
+		// global $soul_writein_Dlinked_List;
+		// $soul_writein_Dlinked_List = ConstructionDlinkedListOpt::getDlinkedListTotal();
 
 		echo "<br>============= 多态 结构 ===============<br>";
 		//foreach ($StandardAsmResultArray as $a => $b){
 		echo "<br><b>$a</b>";
 		echo '<table border = 1><tr><td>sub tree</td><td>line</td><td>Instruction</td><td>Prev usable</td><td>Next usable</td></tr>';
 		
-		$org_List = $soul_writein_Dlinked_List[$org_List_index];
+		$org_List = ConstructionDlinkedListOpt::getDlinkedList($org_List_index);
 		if (isset($org_List[POLY])){
 			$type   = '【多】';
 		}elseif (isset($org_List[BONE])){
@@ -328,8 +329,8 @@ class DebugShowFunc{
 		if (isset($usable[P][MEM_OPT_ABLE])){
 			echo '<font color=red>';
 			foreach ($usable[P][MEM_OPT_ABLE] as $z => $y){
-				$zz = $all_valid_mem_opt_index[$y][CODE];
-				$v  = $all_valid_mem_opt_index[$y];
+				$v  = ValidMemAddr::get($y);
+				$zz = $v[CODE];
 				echo '<br>'.$y.':'.$zz.' {'.$v[BITS].'位 - ';
 				if ($v[OPT] == 1)
 					echo "读; ";
@@ -376,8 +377,8 @@ class DebugShowFunc{
 		if (isset($usable[N][MEM_OPT_ABLE])){
 			echo '<font color=red>';
 			foreach ($usable[N][MEM_OPT_ABLE] as $z => $y){
-				$zz = $all_valid_mem_opt_index[$y][CODE];
-				$v  = $all_valid_mem_opt_index[$y];
+				$v  = ValidMemAddr::get($y);
+				$zz = $v[CODE];					
 				echo '<br>'.$y.':'.$zz.' {'.$v[BITS].'位 - ';
 				if ($v[OPT] == 1)
 					echo "读; ";
@@ -403,15 +404,14 @@ class DebugShowFunc{
 		}
 		echo '</td></tr>';
 		
-		self::my_shower_03_func_1 ($poly_List_index,$c_poly_array);
+		self::my_shower_03_func_1 ($c_poly_array);
 
 		echo "</table>";
 	}
 
 
 	//递归 多态 子数
-	private static function my_shower_03_func_1($poly_List_index,$c_poly_array){
-		global $all_valid_mem_opt_index;
+	private static function my_shower_03_func_1($c_poly_array){
 
 		foreach ($c_poly_array[CODE] as $a => $d){    
 		
@@ -468,8 +468,8 @@ class DebugShowFunc{
 				if (isset($c_poly_array[USABLE][$a][P][MEM_OPT_ABLE])){
 					echo '<font color=red>';
 					foreach ($c_poly_array[USABLE][$a][P][MEM_OPT_ABLE] as $z => $y){
-						$zz = $all_valid_mem_opt_index[$y][CODE];
-						$v  = $all_valid_mem_opt_index[$y];
+						$v  = ValidMemAddr::get($y);
+						$zz = $v[CODE];							
 						echo '<br>'.$y.':'.$zz.' {'.$v[BITS].'位 - ';
 						if ($v[OPT] == 1)
 							echo "读; ";
@@ -521,8 +521,8 @@ class DebugShowFunc{
 				if (isset($c_poly_array[USABLE][$a][N][MEM_OPT_ABLE])){
 					echo '<font color=red>';
 					foreach ($c_poly_array[USABLE][$a][N][MEM_OPT_ABLE] as $z => $y){
-						$zz = $all_valid_mem_opt_index[$y][CODE];
-						$v  = $all_valid_mem_opt_index[$y];
+						$v  = ValidMemAddr::get($y);
+						$zz = $v[CODE];						
 						echo '<br>'.$y.':'.$zz.' {'.$v[BITS].'位 - ';
 						if ($v[OPT] == 1)
 							echo "读; ";
@@ -566,8 +566,7 @@ class DebugShowFunc{
 		global $flag_register_opt_array;
 		global $valid_mem_opt_array;
 		global $soul_usable;
-
-		global $all_valid_mem_opt_index;
+		
 		global $soul_forbid;
 		global $soul_writein_Dlinked_List_Total;
 
@@ -645,8 +644,8 @@ class DebugShowFunc{
 				echo '</td><td>';
 				if (is_array($soul_usable[$a][$c][P][MEM_OPT_ABLE])){
 					foreach ($soul_usable[$a][$c][P][MEM_OPT_ABLE] as $z => $v){
-						$z = $all_valid_mem_opt_index[$v][CODE];
-						$v = $all_valid_mem_opt_index[$v];
+						$v = ValidMemAddr::get($v);						
+						$z = $v[CODE];
 						echo $z.' {'.$v[BITS].'位 - ';
 						if ($v[OPT] == 1)
 							echo "读; ";
@@ -834,8 +833,8 @@ class DebugShowFunc{
 				echo '</td><td>';
 				if (is_array($soul_usable[$a][$c][N][MEM_OPT_ABLE])){
 					foreach ($soul_usable[$a][$c][N][MEM_OPT_ABLE] as $z => $v){
-						$z = $all_valid_mem_opt_index[$v][CODE];
-						$v = $all_valid_mem_opt_index[$v];
+						$v = ValidMemAddr::get($v);
+						$z = $v[CODE];
 						echo $z.' {'.$v[BITS].'位 - ';
 						if ($v[OPT] == 1)
 							echo "读; ";
@@ -867,7 +866,7 @@ class DebugShowFunc{
 				
 				///////////////////////////////////////////////////////
 				//
-				if (isset($c_list[N])){
+				if (false !== $c_list[N]){
 					$c_list = $soul_writein_Dlinked_List_Total[$a]['list'][$c_list[N]];
 				}else{
 					break;

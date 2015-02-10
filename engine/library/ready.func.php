@@ -1875,6 +1875,9 @@ class ReadyFunc{
 
 		global $AsmResultArray;
 
+		$soul_writein_Dlinked_List[$num][P] = false;
+		$soul_writein_Dlinked_List[$num][N] = false;
+
 		if (false !== $prev){
 			$soul_writein_Dlinked_List[$num][P]  = $prev;
 			$soul_writein_Dlinked_List[$prev][N] = $num;

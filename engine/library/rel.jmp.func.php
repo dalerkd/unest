@@ -50,7 +50,7 @@ class RelJmp{
 				
 				//var_dump ($c_change);
 				//var_dump ($soul_writein_Dlinked_List[$a]);
-				ConstructionDlinkedListOpt::setDlinkedList($tmp['len'],$a,'len');
+				ConstructionDlinkedListOpt::setDlinkedList($a,'len',$tmp['len']);
 				//var_dump ($tmp);
 				
 				//影响 本单位影响 的 其他 rel.jmp 
@@ -147,9 +147,9 @@ class RelJmp{
 
 			if (!ConstructionDlinkedListOpt::issetDlinkedListUnit($c_unit,'len')){ //当前单位无len，获取之 (len,rel_jmp)
 				$tmp = self::get_addition_List_info($c_unit,true,true);
-				ConstructionDlinkedListOpt::setDlinkedList($tmp['len'],$c_unit,'len');
+				ConstructionDlinkedListOpt::setDlinkedList($c_unit,'len',$tmp['len']);
 				if (isset($tmp['rel_jmp'])){
-					ConstructionDlinkedListOpt::setDlinkedList($tmp['rel_jmp'],$c_unit,'rel_jmp');
+					ConstructionDlinkedListOpt::setDlinkedList($c_unit,'rel_jmp',$tmp['rel_jmp']);
 				}
 			}
 
@@ -236,6 +236,9 @@ class RelJmp{
 			//next unit
 			if (ConstructionDlinkedListOpt::issetDlinkedListUnit($c_unit,N)){
 				$c_unit = ConstructionDlinkedListOpt::getDlinkedList($c_unit,N);
+				if (false === $c_unit){
+					break;
+				}
 			}else{
 				break;
 			}
@@ -367,7 +370,7 @@ class RelJmp{
 			$reserve_last_pointer  = array();
 			$tmp = reset($discard_objs);
 			//echo "<br><font color=blue>reset: $tmp</font>";
-			if (isset($backup_List[$tmp][P])){
+			if (false !== $backup_List[$tmp][P]){
 				$tmp_tmp = ConstructionDlinkedListOpt::ReadRelJmpPointer($backup_List[$tmp][P]);
 				if (is_array($tmp_tmp)){
 					foreach ($tmp_tmp as $a => $b){
@@ -383,7 +386,7 @@ class RelJmp{
 			//末尾单位
 			$tmp = end($discard_objs);
 			//echo "<br><font color=blue>end: $tmp</font>";
-			if (isset($backup_List[$tmp][N])){
+			if (false !== $backup_List[$tmp][N]){
 				$tmp_tmp = ConstructionDlinkedListOpt::ReadRelJmpPointer($backup_List[$tmp][N]);
 				
 				if (is_array($tmp_tmp)){					
@@ -470,7 +473,7 @@ class RelJmp{
 		$ret = false; 
 
 
-		$c_opt = ConstructionDlinkedListOpt::getCode_from_DlinkedList($unit);
+		$c_opt = GeneralFunc::getCode_from_DlinkedList($unit);
 		if (false === $c_opt){
 			$ret = array('len' => 0);
 		}else{

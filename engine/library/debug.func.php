@@ -15,10 +15,6 @@ class DebugFunc{
 	//$type   : 调试用 ... 特殊标记 产生特殊血肉
 	private static function gen_code_4_debug_usable_array($usable,$prev,$next,$type = '0x0cccccccc'){
 		
-		global $all_valid_mem_opt_index;
-
-
-		
 		$result = false;
 		$i = 0;    
 
@@ -63,9 +59,9 @@ class DebugFunc{
 
 		
 		if (is_array($usable[MEM_OPT_ABLE])){
-			foreach ($usable[MEM_OPT_ABLE] as $a => $b){	
-				$z = $all_valid_mem_opt_index[$b][CODE];
-				$v = $all_valid_mem_opt_index[$b];
+			foreach ($usable[MEM_OPT_ABLE] as $a => $b){
+				$v = ValidMemAddr::get($b);
+				$z = $v[CODE];
 				if ($v[OPT] >= 2){
 					if ($v[BITS] == 32){
 						if (false === strpos($z,'_RELINFO_')){ //含重定位的内存地址，暂不处理
@@ -88,37 +84,12 @@ class DebugFunc{
 		if (false !== $result){
 			$c_meat_index = OrganMeat::append($result);//$meat_result_array[$UNIQUE_meat_index] = $result;				
 			foreach ($result[CODE] as $a => $b){
-				if (false !== $prev){
+				$array = array();
+				$array[MEAT] = $c_meat_index;
+				$array[C]    = $a;				
 
-					ConstructionDlinkedListOpt::setDlinkedList(ConstructionDlinkedListOpt::getDlinkedListIndex(),$prev,N);				
-				}else{
-
-					ConstructionDlinkedListOpt::setListFirstUnit();
-
-				}
-
-				ConstructionDlinkedListOpt::setDlinkedList($prev,ConstructionDlinkedListOpt::getDlinkedListIndex(),P);
-
-				ConstructionDlinkedListOpt::setDlinkedList($c_meat_index,ConstructionDlinkedListOpt::getDlinkedListIndex(),MEAT);
-
-				ConstructionDlinkedListOpt::setDlinkedList($a,ConstructionDlinkedListOpt::getDlinkedListIndex(),C);
-				//
-				//label 暂未考虑
-				//if (isset($b[LABEL])){
-				//
-				//}
-
-				$prev = ConstructionDlinkedListOpt::getDlinkedListIndex();
-		
-				ConstructionDlinkedListOpt::incDlinkedListIndex();
-			} 
-			if (false !== $next){
-
-				ConstructionDlinkedListOpt::setDlinkedList(ConstructionDlinkedListOpt::getDlinkedListIndex() - 1,$next,P);
-
-				ConstructionDlinkedListOpt::setDlinkedList($next,ConstructionDlinkedListOpt::getDlinkedListIndex() - 1,N);
-			}
-			//$UNIQUE_meat_index ++;
+				$prev = ConstructionDlinkedListOpt::appendNewUnit($prev,$array);
+			} 			
 		}
 		return;
 	}

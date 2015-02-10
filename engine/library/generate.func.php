@@ -41,11 +41,10 @@ class GenerateFunc{
 
 	//按正则清除 可用mem表
 	public static function doFilterMemUsable(&$usable_mem){
-	    global $all_valid_mem_opt_index;
 		if (is_array($usable_mem)){
 			$tmp = $usable_mem;
-			foreach ($tmp as $i => $a){		
-				if (preg_match('/'.self::$_user_cnf_stack_pointer_define.'/',$all_valid_mem_opt_index[$a][CODE])){
+			foreach ($tmp as $i => $a){
+				if (preg_match('/'.self::$_user_cnf_stack_pointer_define.'/',ValidMemAddr::get($a,CODE))){
 					unset ($usable_mem[$i]);				
 				}			
 			}
@@ -437,12 +436,8 @@ class GenerateFunc{
 					$buf .= OrganFat::start(5,$enter_flag,$next,1);
 				}
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				if (ConstructionDlinkedListOpt::issetDlinkedListUnit($next,N)){	
-					$next =  ConstructionDlinkedListOpt::getDlinkedList($next,N);
-
-					//echo " $next -> ";
-
-				}else{
+				$next = ConstructionDlinkedListOpt::getDlinkedList($next,N);
+				if (false === $next){
 					break;
 				}
 			}	
