@@ -737,7 +737,6 @@ class IOFormatParser{
 			$c_lp += $newCodeSection[$a]['size'];
 		}    
 
-		//file_put_contents("./tmp/fuck.bin",$buf);
 		global $outputfile;
 		file_put_contents($outputfile,$buf);
 

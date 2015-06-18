@@ -17,7 +17,7 @@ class OrganFat{
 		);
 		$ret = '';
 		
-		$fat_size = array_rand($fat_size_array);
+		$fat_size = GeneralFunc::my_array_rand($fat_size_array);
 
 		$fat_size = $fat_size_array[$fat_size];
 

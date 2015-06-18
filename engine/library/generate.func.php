@@ -171,7 +171,7 @@ class GenerateFunc{
 		}   
 
 		if (count($usable_bits)){
-			$bits = array_rand($usable_bits); 		
+			$bits = GeneralFunc::my_array_rand($usable_bits); 		
 		
 			//var_dump ($bits);
 			if (4 === $bits){
@@ -390,7 +390,7 @@ class GenerateFunc{
 					$max_output --;
 				}
 
-				$current = ConstructionDlinkedListOpt::getDlinkedList($next);
+				$current = ConstructionDlinkedListOpt::getUnit($next);
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				//prev.fat ? -> 加入脂肪	
 				///*
@@ -414,18 +414,22 @@ class GenerateFunc{
 				if (isset($current[LABEL])){
 					$buf .= $current[LABEL]."$enter_flag";
 				}else{
-					$comment = '';
-					if (isset ($current[POLY])){	
-						$comment = ' ;@@@ poly';
-						if (true === $current[SOUL]){
-							$comment = ' ;@@@ poly [from soul]';
-						}						
-					}elseif (isset ($current[BONE])){							
-						$comment = ' ;&&& bone';
-					}elseif (isset ($current[MEAT])){	
-						$comment = ' ;*** meat';
+					if (isset($current[COMMENT])){
+						$comment = ';'.$current[COMMENT];
 					}else{
-						$comment = ';### org opt';
+						$comment = '';
+						if (isset ($current[POLY])){	
+							$comment = ' ;@@@ poly';
+							if (true === $current[SOUL]){
+								$comment = ' ;@@@ poly [from soul]';
+							}						
+						}elseif (isset ($current[BONE])){							
+							$comment = ' ;&&& bone';
+						}elseif (isset ($current[MEAT])){	
+							$comment = ' ;*** meat';
+						}else{
+							$comment = ';### org opt';
+						}
 					}
 					self::gen_asm_file_kid($a,OrgansOperator::GetByDListUnit($current,CODE),$buf,$buf_head,$enter_flag,$reloc_info_2_rewrite_table,$non_null_labels,$comment.$show_len);					
 				}
@@ -436,8 +440,8 @@ class GenerateFunc{
 					$buf .= OrganFat::start(5,$enter_flag,$next,1);
 				}
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				$next = ConstructionDlinkedListOpt::getDlinkedList($next,N);
-				if (false === $next){
+				$next = ConstructionDlinkedListOpt::nextUnit($next);
+				if (!$next){
 					break;
 				}
 			}	

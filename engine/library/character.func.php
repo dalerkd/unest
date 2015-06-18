@@ -10,6 +10,10 @@ class Character{
 	private static $_tpl;           // 优先级模板
 	private static $_organ_idx;     // organ index
 
+	public static function readRate(){
+		return self::$_rate;
+	}
+
     public static function show(){
 		echo "<table border=1>";
 		echo '<tr bgcolor="#c0c0c0">';
@@ -74,8 +78,8 @@ class Character{
 		self::$_organ_idx = array(BONE,MEAT,POLY);
 	}
 
-	//合并，继承
-	//当 $merge_rate 大于 原值 且 原值有效(>0) 时，以 $merge_rate为值
+	// 合并，继承
+	// 当 $merge_rate 大于 原值 且 原值有效(>0) 时，以 $merge_rate为值
 	public static function mergeRate($id,$origin_rate,$merge_rate){
 	    foreach ($origin_rate as $type => $old){
 			if (($old) and ($merge_rate[$type] > $old)){
@@ -83,6 +87,7 @@ class Character{
 			}
 		}
 	}
+	
 	// 清已处理 记录
 	public static function flushUnits(){
 		self::$_done_idx      = array();
@@ -90,10 +95,10 @@ class Character{
 		self::$_rollback_rate = array();
 	}
 
-	//单位初始化
-	//$DListID:  链表编号
-	//$att    ： 属性来源(soul | meat | poly | bone)
-	//返回    :  Rate
+	// 单位初始化
+	// $DListID:  链表编号
+	// $att    ： 属性来源(soul | meat | poly | bone)
+	// 返回    :  Rate
 	public static function initUnit($DListID,$att=SOUL){
         
 		$ret = false;
@@ -128,7 +133,7 @@ class Character{
 		return $ret;
 	}
 
-	//获取操作目标(根据优先级)
+	// 获取操作目标(根据优先级)
 	public static function random($type){
 	    $i = rand(1,9);
 		if (empty(self::$_rate[$type][$i])){ // 优先级无单位，退到 1 级，见readme.character.txt [2014.10.19]
@@ -138,7 +143,7 @@ class Character{
 			    $i = 1;
 			}
 		}
-		return array_rand(self::$_rate[$type][$i]);
+		return GeneralFunc::my_array_rand(self::$_rate[$type][$i]);
 	}
 	
     //优先级变化 范围为 1-9 / 初始化时需设置0,使用::setRate()函数
@@ -159,14 +164,14 @@ class Character{
 		}
 	}
 	
-	//清除所有Rate
+	// 清除所有Rate
 	public static function removeRate($id){
 	    self::setRate(POLY,$id,0);
 	    self::setRate(BONE,$id,0);
 	    self::setRate(MEAT,$id,0);
 	}
 
-	//获取目标单位优先级(全单位)
+	// 获取目标单位优先级(全单位)
 	public static function getAllRate($id){
 	    $ret = array();
 		$ret[POLY] = self::getRate(POLY,$id);
@@ -175,7 +180,7 @@ class Character{
 		return $ret;
 	}
 
-	//clone 优先级，并附加
+	// clone 优先级，并附加
 	public static function cloneRate($id,$rate_array,$extra_rate){
 	    foreach ($rate_array as $type => $rate){
 		    if ($rate > 0){
@@ -185,7 +190,7 @@ class Character{
 		}
 	}
 
-	//获取当前优先级
+	// 获取当前优先级
 	private static function getRate($organ,$id){
 		$ret = 0;
 		for ($i= 1;$i < 10;$i++){

@@ -372,7 +372,7 @@ class OrganPoly{
 									}
 									if (self::$_poly_model_repo[$obj][$b][RAND_PRIVILEGE][$z] >=2){ //需要写权限
 										if (false !== $c_usable_mem_writable){
-											$w = array_rand($c_usable_mem_writable);	
+											$w = GeneralFunc::my_array_rand($c_usable_mem_writable);	
 											//当前指令 不含 随机 内存地址(或用来构成该地址的寄存器) 操作
 											if (false === self::org_include_mem($org,ValidMemAddr::get($w))){
 												$rand_result[$a][$z] = ValidMemAddr::get($w,CODE);
@@ -382,7 +382,7 @@ class OrganPoly{
 											}									
 										}
 									}elseif (false !== $c_usable_mem_readonly){                                                      //只要读权限
-										$w = array_rand($c_usable_mem_readonly);							
+										$w = GeneralFunc::my_array_rand($c_usable_mem_readonly);							
 										$rand_result[$a][$z] = ValidMemAddr::get($w,CODE);
 										$rand_result[$a][P_TYPE][$z] = 'm';
 										$rand_result[$a][P_BITS][$z] = 32;
@@ -405,7 +405,7 @@ class OrganPoly{
 									}
 								}else{                                                      //只要读权限
 									
-									$rand_result[$a][$z] = array_rand(Instruction::getRegsByBits(32));
+									$rand_result[$a][$z] = GeneralFunc::my_array_rand(Instruction::getRegsByBits(32));
 									$rand_result[$a][P_TYPE][$z] = 'r';
 									$rand_result[$a][P_BITS][$z] = 32; // 整数一律 默认32位
 								}   
@@ -602,7 +602,7 @@ class OrganPoly{
 				//随机获得 多态模板
 				if (count($usable_poly_model)){
 
-					$x = array_rand($usable_poly_model);
+					$x = GeneralFunc::my_array_rand($usable_poly_model);
 
 					if (isset(self::$_poly_model_repo[$obj[OPERATION]][$usable_poly_model[$x]])){ //开始根据 多态模板 生成 多态 代码						        
 						if ('int3' === $x){
@@ -627,10 +627,8 @@ class OrganPoly{
 	private static function insert_into_list ($org,$poly_index,$asm_array,$from_soul=false){
 
 		$ret  = array();		
-		$prev = false;
-		if (ConstructionDlinkedListOpt::issetDlinkedListUnit($org,P)){
-			$prev = ConstructionDlinkedListOpt::getDlinkedList($org,P);
-		}
+		$prev = ConstructionDlinkedListOpt::prevUnit($org);
+		
 		ConstructionDlinkedListOpt::remove_from_DlinkedList($org);
 		foreach ($asm_array as $a => $b){
 			$array = array();
@@ -654,7 +652,7 @@ class OrganPoly{
         
 		$obj = $objs[1];
 
-		$b = ConstructionDlinkedListOpt::getDlinkedList($obj);
+		$b = ConstructionDlinkedListOpt::getUnit($obj);
 
 		$from_soul = false;				
 

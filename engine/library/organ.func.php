@@ -6,14 +6,18 @@ class OrgansOperator{
 	// private static $_poly_result_reverse;
     private static $_bone_result;
     private static $_meat_result;
-	private static $_soul_usable;
+
+	private static $_Asm_Result_Index;
 	private static $_Asm_Result;
+	private static $_soul_usable;
+	private static $_soul_forbid;
 
 
-    //init
+    // init
 	public static function init($sec){
         global $StandardAsmResultArray;
         global $soul_usable;
+        global $soul_forbid;        
 
 	    self::$_poly_result = array();
 		// self::$_poly_result_reverse = array();
@@ -22,10 +26,46 @@ class OrgansOperator{
 
         self::$_Asm_Result  = $StandardAsmResultArray[$sec];       
 		self::$_soul_usable = $soul_usable[$sec];
+		self::$_soul_forbid = $soul_forbid[$sec];
+		
+		// var_dump (max(array_keys(self::$_Asm_Result)));
+		self::$_Asm_Result_Index = 1 + max(array_keys(self::$_Asm_Result));
 	}
 
-    //根据 双链表 单位 返回 organ 单位
-	//params:
+	// add usable reg (['EAX'][BITS] = true)
+	public static function addUsableReg($unit,$dir,$reg,$ignor_forbid){
+		if (isset(self::$_Asm_Result[$unit])){
+			if (!isset(self::$_soul_forbid[$unit][$dir][NORMAL][$reg])){
+				self::$_soul_usable[$unit][$dir][NORMAL_WRITE_ABLE][$reg][OPT_BITS] = true;
+				return true;
+			}else{
+				if ($ignor_forbid){
+					unset (self::$_soul_forbid[$unit][$dir][NORMAL][$reg]);
+					self::$_soul_usable[$unit][$dir][NORMAL_WRITE_ABLE][$reg][OPT_BITS] = true;
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	// new unit
+	public static function newUnit($unit){
+		$idx = self::$_Asm_Result_Index;
+		self::$_Asm_Result[$idx] = $unit;
+		self::$_Asm_Result_Index ++;
+		return $idx;
+	}
+	// clone usable(s)
+	public static function cloneUsables($src,$direction,$dst){
+		self::$_soul_usable[$dst][P] = self::$_soul_usable[$src][$direction];
+		self::$_soul_usable[$dst][N] = self::$_soul_usable[$src][$direction];
+		self::$_soul_forbid[$dst][P] = self::$_soul_forbid[$src][$direction];
+		self::$_soul_forbid[$dst][N] = self::$_soul_forbid[$src][$direction];
+	}
+
+ 	// 根据 双链表 单位 返回 organ 单位
+	// params:
 	//         $unit:     DList' unit (array)
 	//         $branch: CODE | USABLE | FAT
 	//         $key: sub index  
@@ -43,13 +83,12 @@ class OrgansOperator{
 		return $ret;	
 	}
 
-	//根据指定下标获取value
+	// 根据指定下标获取value
 	// params:       $organ : MEAT | BONE | ...
 	//               $id    : organ[?]
 	//               $branch: code | usable | fat | ...
 	//               $sid   : id in organ unit
-	//               $key   : array index
-	//
+	//               $key   : array index	
 	public static function Get($organ,$id,$branch,$sid=false,$key=false,$skey=false){
 	    $ret = false;
 		if (MEAT === $organ){
@@ -91,7 +130,7 @@ class OrgansOperator{
 		return $ret;
 	}
 
-	//为Organ.Result 数组赋值
+	// 为Organ.Result 数组赋值
 	public static function Set($organ,$id,$value,$extend = false){
 	    if (MEAT == $organ){
 			self::$_meat_result[$id] = $value;
@@ -126,14 +165,14 @@ class OrgansOperator{
 		}	
 	}
 
-	//打印 数组
+	// 打印 数组
 	public static function Printer(){
 	    var_dump (self::$_meat_result);
 	}
 
 	// 前(后)是否可插入脂肪(fat)
-	//params:  $unit  :  DList's unit
-	//         $direct:  1 prev   2 next
+	// params:  $unit  :  DList's unit
+	// 			$direct:  1 prev   2 next
 	//
 	public static function CheckFatAble($unit,$direct = 1){
 		if (isset($unit[BONE])){
@@ -148,7 +187,7 @@ class OrgansOperator{
 		return false;	
 	}
 
-	//poly 反向数组
+	// poly 反向数组
 	// public static function SetPolyReverse($i,$k,$v){
 	//     self::$_poly_result_reverse[$i][$k] = $v;
 	// }
@@ -156,7 +195,7 @@ class OrgansOperator{
 	//     return self::$_poly_result_reverse[$i][$k];
 	// }
 
-	//生成 organs 处理流程 数组
+	// 生成 organs 处理流程 数组
 	public static function GenOrganProcess($user_strength,$count,$max_strength){
 
 			$default_max = 0;
@@ -229,6 +268,28 @@ class OrgansOperator{
 			shuffle($process);
 
 			return $process;
+	}
+
+	public static function show($idx){
+		echo '<table border=1>';
+		echo '<tr><td>prev usable</td><td>prev forbid</td><td>asm</td><td>next forbid</td><td>next uable</td></tr>';
+		echo '<tr>';
+		echo '<td>';
+		var_dump (self::$_soul_usable[$idx][P]);
+		echo '</td>';
+		echo '<td>';
+		var_dump (self::$_soul_forbid[$idx][P]);
+		echo '</td>';
+		echo '<td>';
+		var_dump (self::$_Asm_Result[$idx]);
+		echo '</td>';
+		echo '<td>';
+		var_dump (self::$_soul_forbid[$idx][N]);
+		echo '</td>';
+		echo '<td>';
+		var_dump (self::$_soul_usable[$idx][N]);
+		echo '</td>';		
+		echo '</table>';
 	}
    
 }

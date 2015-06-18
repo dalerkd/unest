@@ -4,9 +4,9 @@
 //堆栈指针 寄存器
 define ('STACK_POINTER_REG','ESP');
 require dirname(__FILE__)."/include/common.inc.php";
+require dirname(__FILE__)."/library/general.func.php";
 require dirname(__FILE__)."/library/generate.func.php";
 require dirname(__FILE__)."/library/mem.func.php";
-require dirname(__FILE__)."/library/general.func.php";
 require dirname(__FILE__)."/library/data.construction.php";
 require dirname(__FILE__)."/library/organ.func.php";
 require dirname(__FILE__)."/library/instruction.func.php";
@@ -20,6 +20,8 @@ require dirname(__FILE__)."/../nasm.inc.php";
 require dirname(__FILE__)."/library/oplen.func.php";
 require dirname(__FILE__)."/library/rel.jmp.func.php";
 require dirname(__FILE__)."/library/debug.func.php";
+require dirname(__FILE__)."/library/stero.graphic.class.php";
+require dirname(__FILE__)."/library/generate.stack.balance.func.php";
 //////////////////////////////////////////
 //捕获超时
 $complete_finished = false; //执行完成标志
@@ -87,6 +89,9 @@ if (!GeneralFunc::LogHasErr()){
 	$ready_preprocess_config         = CfgParser::get_rdy('preprocess_config');   //保护(不进行混淆)设置
 	$dynamic_insert                  = CfgParser::get_rdy('dynamic_insert');      //动态 插入
 	$preprocess_sec_name             = CfgParser::get_rdy('preprocess_sec_name'); //预处理阶段收集的操作目标段 名
+	$stack_balance_array             = CfgParser::get_rdy('stack_balance_array');
+	$soul_effect_GPR                 = CfgParser::get_rdy('soul_effect_GPR');
+
 	ValidMemAddr::init(CfgParser::get_rdy('valid_mem_index'),CfgParser::get_rdy('valid_mem_index_ptr'));
 	//加载输出文件格式 解析器
 	$file_format_parser = dirname(__FILE__)."/IOFormatParser/".$output_type.".IO.php";
@@ -158,7 +163,7 @@ if (!GeneralFunc::LogHasErr()){
 	}		
 
 	//初始化 汇编输出文件 以及 动态写入 内容
-	$init_asm_file = "[bits 32]\r\n";
+	$init_asm_file = '[bits '.OPT_BITS."]\r\n";
 	foreach ($dynamic_insert as $a => $b){			
 		if (isset($b['new'])){
 			$insert_value = $b['new'];
@@ -175,13 +180,12 @@ if (!GeneralFunc::LogHasErr()){
 
 	$non_null_labels = array();             //应用跳转 标号 的 非 零 单位
 											//需要 编译完成后 再修改其值
-
 }
-
-
 
 //直接 按节表 逐个 处理，避免内存占用过多
 foreach ($CodeSectionArray as $sec => $body){
+
+	echo "<br>++++++++++++++++++++++++ $sec ++++++++++++++++++++++++++ <br>"; 
 
 	//各节表 代码 原始长度
 	//echo "<br>code size: $sec: ".$body['SizeOfRawData'];
@@ -192,26 +196,23 @@ foreach ($CodeSectionArray as $sec => $body){
 		break;
 	}
 
-	echo "<br>++++++++++++++++++++++++ $sec ++++++++++++++++++++++++++ <br>";        
-
-	GenerateFunc::initStackPointer($sec);		
+	GenerateFunc::initStackPointer($sec);
 	
 	GenerateFunc::reset_ipsp_list_by_stack_pointer_define($soul_writein_Dlinked_List_Total[$sec]['list'],$StandardAsmResultArray[$sec]);
-			 
-
+		 
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	//顺序写入 双向链表 信息
-	ConstructionDlinkedListOpt::init($soul_writein_Dlinked_List_Total[$sec],$rel_jmp_range[$sec],$rel_jmp_pointer[$sec]);		
+	// 顺序写入 双向链表 信息
+	ConstructionDlinkedListOpt::init($soul_writein_Dlinked_List_Total[$sec],$rel_jmp_range[$sec],$rel_jmp_pointer[$sec]);
 	
-	//init Organs Arrays
-	OrgansOperator::init($sec);        
+	// init Organs Arrays
+	OrgansOperator::init($sec);
 	//
 	////////////////////////////////////////////////////////////////////////////////////////////////
-	//根据 双向链表 信息 初始化 character.Rate
+	// 根据 双向链表 信息 初始化 character.Rate
 	Character::flushUnits();
 	foreach ($soul_writein_Dlinked_List_Total[$sec]['list'] as $a => $b){
 		Character::initUnit($a,SOUL);
-	}	
+	}
 	
 	$c_rel_jmp_switcher = $rel_jmp_switcher[$sec];
 
@@ -233,12 +234,20 @@ foreach ($CodeSectionArray as $sec => $body){
 		$c_rel_info = false;
 	}
 
-
+	////////////////////////////////////////////////////////////////////////////////////////////////	
+	// stack balance gen
+	StackBalance::start($stack_balance_array[$sec],$soul_effect_GPR[$sec],ConstructionDlinkedListOpt::getAllUnits(),Character::readRate());
+	// ConstructionDlinkedListOpt::show();
+	if ($c_rel_jmp_switcher){
+		if (!RelJmp::reset_rel_jmp_array(false,false,ConstructionDlinkedListOpt::readListFirstUnit())){
+			// TODO: 应尝试恢复，目前简化处理，直接放弃!			
+			GeneralFunc::LogInsert("reset_rel_jmp_array() fail after StackBalance::start()",ERROR);
+		}
+	}	
+	
 	//测试soul_usable 项是否有问题,所有可写单位(寄存器,内存地址)和可读单位(内存地址)都写入操作代码，(注:flag目前不管)
 	//                             这样...当soul_usable有问题，我们就能通过运行结构文件发现了(除不会出错的那种问题...)
-	
-
-   if (true === $c_user_cnf['gen4debug01']){
+	if (true === $c_user_cnf['gen4debug01']){
 		GeneralFunc::LogInsert("gen4debug01 option was effected on section: $sec , name: ".$body['name'],3); //debug 应用,提示之
 		DebugFunc::debug_usable_array(ConstructionDlinkedListOpt::readListFirstUnit());
 		if ($c_rel_jmp_switcher){ //识别是否超过定长跳转范围，如果超过...返回error
@@ -251,24 +260,7 @@ foreach ($CodeSectionArray as $sec => $body){
 		//exit;
 		
 	}else{
-	
-		if (isset($c_user_cnf['meat_mutation'])){
-			$c_MeatMutation = $c_user_cnf['meat_mutation'];
-		}else{
-			$c_MeatMutation = 10; //血肉突变 默认值 mt_rand(1,$c_MeatMutation); if (==1){mutation...} 
-								  //         false -> not mutation
-		}
-
-		if (isset($c_user_cnf['soul_focus'])){
-			$c_SoulFocus = $c_user_cnf['soul_focus'];
-		}else{
-			$c_SoulFocus = 3;     //灵魂焦点 select_obj时必须以原始代码为标记
-							  //   mt_rand(1,$c_SoulFocus); if (==1){true...} 
-							  //   if (0==$c_SoulFocus) {false}
-		}
-		//var_dump ($sec_name);
-		//echo "<br> $sec : <br> MeatMutation : $c_MeatMutation <br> SoulFocus : $c_SoulFocus";
-
+		
 		////////////////////////////////////////////////////////////////////////////////////////////////
 		//生成 处理 poly,bone,meat执行顺序的数组
 		
@@ -391,8 +383,7 @@ foreach ($CodeSectionArray as $sec => $body){
 	//var_dump ($c_usable_oplen);
 }	
    
-
-if (!GeneralFunc::LogHasErr()){		
+if (!GeneralFunc::LogHasErr()){
 	//生成完成，开始编译
 	$report_filename = "$out_file".'.report';
 	$binary_filename = IOFormatParser::out_file_gen_name();
@@ -425,7 +416,6 @@ if (!GeneralFunc::LogHasErr()){
 		GeneralFunc::LogInsert('compile fail, generate stopped.');
 	}
 	$exetime_record['others'] = GeneralFunc::exetime_record($stime); //获取程序执行的时间
-
 }
 
 //输出$output[] 到日志文件,jason格式
@@ -435,9 +425,5 @@ if (!GeneralFunc::LogHasErr()){
 
 $complete_finished = true; //执行完成标志
 exit;
-
-
-
-
 
 ?>

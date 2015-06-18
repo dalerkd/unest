@@ -107,9 +107,7 @@ class OrganMeat{
 	private static function insert_into_list($current_forward,$meat_generated,$direct = P){
 		$prev = false;
 		if (P === $direct){
-			if (ConstructionDlinkedListOpt::issetDlinkedListUnit($current_forward,P)){
-				$prev = ConstructionDlinkedListOpt::getDlinkedList($current_forward,P);			
-			}			
+			$prev = ConstructionDlinkedListOpt::prevUnit($current_forward);		
 		}else{
 			$prev = $current_forward;
 		}
@@ -139,13 +137,13 @@ class OrganMeat{
 		
 		$key = array_search ($opt,self::$_IDX[self::$_C_ARRAY_ID]['OPT']);
 		if ((false !== $key) and (isset(self::$_MATCH[self::$_C_ARRAY_ID][$key]))){			
-			$split_point = array_rand(self::$_MATCH[self::$_C_ARRAY_ID][$key]);
+			$split_point = GeneralFunc::my_array_rand(self::$_MATCH[self::$_C_ARRAY_ID][$key]);
 			$ret = self::$_MATCH[self::$_C_ARRAY_ID][$key][$split_point];			
 		}else{
 			if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
 			    echo "<b><font color=blue>[split_point Random]</font></b>";
 			}
-			$ret = array_rand(self::$_INST[self::$_C_ARRAY_ID]);
+			$ret = GeneralFunc::my_array_rand(self::$_INST[self::$_C_ARRAY_ID]);
 		}
 
 		return $ret;
@@ -682,7 +680,7 @@ class OrganMeat{
 				$ret .= '+';
 			}
 			$ret .= $tmp[1];
-			$rate = array_rand(array('1'=>true,'2'=>true,'4'=>true,'8'=>true));
+			$rate = GeneralFunc::my_array_rand(array('1'=>true,'2'=>true,'4'=>true,'8'=>true));
 			$ret .= '*'.$rate;
 			if ((0 === $first) and ($rate > 2)){ //第二寄存器 乘数如大于2 且第一寄存器不存在，影响长度固定为 5 (最大)
 				$second = 2;
@@ -739,7 +737,7 @@ class OrganMeat{
 			}
 		}
 		if (!empty($mem_array)){
-			$mKey = array_rand ($mem_array);
+			$mKey = GeneralFunc::my_array_rand ($mem_array);
 			$mIdx = $mem_array[$mKey];
 			$mem = ValidMemAddr::get($mIdx);
 			if (isset($mem)){
@@ -909,7 +907,7 @@ class OrganMeat{
 
         // about meat.obj
 		$obj = $objs[1];
-		$b = ConstructionDlinkedListOpt::getDlinkedList($obj);
+		$b = ConstructionDlinkedListOpt::getUnit($obj);
 		$c_obj    = OrgansOperator::GetByDListUnit($b,CODE);
 		$c_usable = OrgansOperator::GetByDListUnit($b,USABLE);
 		$c_fat    = OrgansOperator::GetByDListUnit($b,FAT);
@@ -921,7 +919,7 @@ class OrganMeat{
 		self::gen_mem_usable_reg_effect(self::$_mem_readable_array,R);
 		self::gen_mem_usable_reg_effect(self::$_mem_writable_array,W);		
         // 可用meat.tpl中rand一个当前任务用
-		self::$_C_ARRAY_ID = array_rand(self::$_MATCH);
+		self::$_C_ARRAY_ID = GeneralFunc::my_array_rand(self::$_MATCH);
         // 随机获取 & 分配 meat.units
 		$split_point = self::get_split_point($c_obj[OPERATION]);
 		$rate = Character::getAllRate($obj);
@@ -1014,7 +1012,7 @@ class OrganMeat{
         if ($start_index < self::$_index){
         	// var_dump (OrgansOperator::Printer());
         	// var_dump (self::$_meat_units);
-        	// echo "<br>fuck.P: $start_index - ".self::$_index;
+        	
             self::insert_into_list($obj,self::$_index - $start_index,P);
             // self::insert_into_list($start_index,P);
         }
@@ -1023,7 +1021,7 @@ class OrganMeat{
         self::genMeats($behind_index,$c_usable[N]);
         if ($start_index < self::$_index){
         	// var_dump (OrgansOperator::Printer());
-        	// echo "<br>fuck.N: $start_index - ".self::$_index;
+        	
         	self::insert_into_list($obj,self::$_index - $start_index,N);
             // self::insert_into_list($start_index,N);
         }

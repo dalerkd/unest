@@ -96,52 +96,39 @@ class DebugFunc{
 
 	//
 
-	public static function debug_usable_array($c_lp){		
-
+	public static function debug_usable_array($c_lp){
 
 		$p_lp   = false;                            //上一个指针
-		$n_lp   = false;                            //下一个指针
-
-
 
 		while (true){
-			if (ConstructionDlinkedListOpt::issetDlinkedListUnit($c_lp,N)){
-				$n_lp = ConstructionDlinkedListOpt::getDlinkedList($c_lp,N);
-			}else{
-				$n_lp = false;
-			}
+			$current = ConstructionDlinkedListOpt::getUnit($c_lp);
 
-			$current = ConstructionDlinkedListOpt::getDlinkedList($c_lp);
+			if ($current){
 
-			$c_usable = OrgansOperator::Get(SOUL,$current[C],USABLE);
-			
-			if (false !== $c_usable[P]){
-				//echo "<br>prev $c_lp   -> $p_lp";
-				self::gen_code_4_debug_usable_array($c_usable[P],$p_lp,$c_lp,'0xaaaaaaaa');
-				//exit;
-			}
-			if (false !== $c_usable[N]){
-				//echo "<br>next $c_lp  -> $n_lp";
-				self::gen_code_4_debug_usable_array($c_usable[N],$c_lp,$n_lp,'0xbbbbbbbb');
-			}
+				$n_lp = ConstructionDlinkedListOpt::nextUnit($c_lp);
 
-
-			//echo "<br>$c_lp";
-			//var_dump ($current);
-			//var_dump ($c_usable);
-
-			if (false === $n_lp){
-				break;
-			}else{
-				if (ConstructionDlinkedListOpt::issetDlinkedListUnit($n_lp,P)){
-					$p_lp = ConstructionDlinkedListOpt::getDlinkedList($n_lp,P);
-				}else{
-					$p_lp = $c_lp;
+				$c_usable = OrgansOperator::Get(SOUL,$current[C],USABLE);
+				
+				if (false !== $c_usable[P]){
+					//echo "<br>prev $c_lp   -> $p_lp";
+					self::gen_code_4_debug_usable_array($c_usable[P],$p_lp,$c_lp,'0xaaaaaaaa');
+					//exit;
 				}
-				$c_lp = $n_lp;
+				if (false !== $c_usable[N]){
+					//echo "<br>next $c_lp  -> $n_lp";
+					self::gen_code_4_debug_usable_array($c_usable[N],$c_lp,$n_lp,'0xbbbbbbbb');
+				}
+				
+				if (!$n_lp){
+					break;
+				}else{
+					if (!($p_lp = ConstructionDlinkedListOpt::prevUnit($n_lp))){
+						$p_lp = $c_lp;
+					}
+					$c_lp = $n_lp;
+				}
 			}
 		}
-
 	}
 }
 

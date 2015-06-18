@@ -4,10 +4,7 @@ if(!defined('UNEST.ORG')) {
         exit('Access Denied');
 }
 
-///////////////////////////////////////////////
-//
-//捕获退出(输出log日志)
-//
+// 捕获退出(输出log日志)
 function shutdown_except(){
     global $complete_finished;
 
@@ -24,19 +21,14 @@ function shutdown_except(){
 	echo "<br>memory_get_usage: ";
     var_dump (memory_get_usage());
 }
-
-
-/******************************************/
-//通用 函数 集
-
+// ***
+// 通用 函数 集
 class GeneralFunc{
-    //
-	// 日志记录 操作函数s
+    // 日志记录 操作函数s
 	private static $_error   = array();
 	private static $_warning = array();
 	private static $_notice  = array();
-
-	//写记录日志 $type 1: error  2:warning  3:notice
+	// 写记录日志 $type 1: error  2:warning  3:notice
 	public static function LogInsert($log,$type=1){
 		if (1 === $type){
 		    self::$_error[] = $log;   
@@ -58,17 +50,24 @@ class GeneralFunc{
 		}
 		return true;
 	}
-
-    /////////////////////////////////////////////////////
-	public static function check_value($value,$func = false){
+	// replace php array_rand (for rand() -> mt_rand())
+	public static function my_array_rand($arr){
+		if ((is_array($arr)) and (!empty($arr))){
+			$keys = array_keys($arr);
+			$i = mt_rand(0,count($keys) - 1);
+			return $keys[$i];
+		}
+		return false;
+	}
+    // 
+    public static function check_value($value,$func = false){
 		if (false === $func){
 			return ((isset($value)) and ($value));
 		}else{
 			return ((isset($value)) and ($func($value)));
 		}
 	}
-	/////////////////////////////////////////////////////
-	//统计运行时间
+	// 统计运行时间
 	private static $_stime = 0;
 	public static function exetime_record(){
 		/*       记录函数运行时间              */
@@ -82,10 +81,8 @@ class GeneralFunc{
 		self::$_stime = microtime(true); //获取程序开始执行的时间
 		return $total;
 		/**************************************/
-	}    
-
-	///////////////////////////////////////////////////
-	//根据usable前后stack确定指令的stack环境(可用or 不可用)
+	}
+	// 根据usable前后stack确定指令的stack环境(可用or 不可用)
 	public static function soul_stack_set(&$code,$usable){
 		foreach ($code as $a => $b){
 			if (is_array($b)){
@@ -97,13 +94,8 @@ class GeneralFunc{
 			}
 		}
 	}
-
-	///////////////////////////////////////////////
-	//
-	//获取文件行数(失败返回false,成功返回行数)
-	//
-	// 注：超长汇编指令(换行) 未考虑
-	//
+	// 获取文件行数(失败返回false,成功返回行数)
+	// TODO：超长汇编指令(换行) 未考虑
 	public static function get_file_line($filename){
 		$line = 0;
 		@$fp = fopen($filename , 'r');  
@@ -117,11 +109,7 @@ class GeneralFunc{
 		}
 		return false;
 	}
-
-	
-	///////////////////////////////////////////////
-	//内部错误 日志 保存(保存到文件 or 发送到邮件)
-
+	// 内部错误 日志 保存(保存到文件 or 发送到邮件)
 	public static function internal_log_save($title,$contents=false){
 
 		$log_path = dirname(__FILE__)."/../../log/ENGIN_VER/";
@@ -166,11 +154,25 @@ class GeneralFunc{
 		return true;
 	}
 
-
-	//////////////////////////////////////////////
-	//
-	//识别 目标指令是否需要ipsp保护
-	//
+	// 多维数组去掉value === empty 的单位(s)
+	public static function multi_array_filter($array){
+		$ret = array();
+		foreach ($array as $key => $value){
+			if (is_array($value)){
+				$tmp = self::multi_array_filter($value);
+				if (!empty($tmp)){
+					$ret[$key] = $tmp;
+				}
+			}else{
+				if (!empty($value)){
+					$ret[$key] = $value;
+				}
+			}
+		}
+		return $ret;
+	}
+	
+	// 识别 目标指令是否需要ipsp保护
 	public static function is_effect_ipsp($asm,$rule = 1,$sp_define = false){
 
 
@@ -217,10 +219,7 @@ class GeneralFunc{
 		}
 		return false;
 	}
-
-
-	///////////////////////////////////////////////////////////
-	//确定 POST or Get 传递进来的动态插入数据
+	// 确定 POST or Get 传递进来的动态插入数据
 	public static function get_dynamic_insert_value (&$dynamic_insert){
 
 		global $language;
@@ -252,16 +251,16 @@ class GeneralFunc{
 		//var_dump ($new_dynamic_insert);
 		//var_dump ($dynamic_insert);
 		//exit;
-	}	
-
+	}
 	// 获取 链表单位编号 获取 CODE 数组
 	public static function getCode_from_DlinkedList($ListID){
 		$ret  = false;
-		$unit = ConstructionDlinkedListOpt::getDlinkedList($ListID);
-		if (isset($unit[LABEL])){
-		    
-		}else{
-            $ret = OrgansOperator::GetByDListUnit($unit,CODE);
+		if ($unit = ConstructionDlinkedListOpt::getUnit($ListID)){
+			if (isset($unit[LABEL])){
+			    
+			}else{
+	            $ret = OrgansOperator::GetByDListUnit($unit,CODE);
+			}
 		}
 		return $ret;
 	} 	

@@ -583,7 +583,7 @@ class CfgParser{
 		
 			$c_define = self::$_user_config[$a]; 
 			foreach ($b as $c => $d){
-				$c_list = $soul_writein_Dlinked_List_Total[$d]['list'][0]; //未 多态/混淆 ，起始位默认是0
+				$c_list = $soul_writein_Dlinked_List_Total[$d]['list'][DEFAULT_DLIST_FIRST_NUM];
 				while (true){				
 					$f = $c_list[C]; 
 					if (true === $c_define['protect']['thread_memory']){   //禁止所有内存地址 可写入 属性

@@ -17,9 +17,14 @@ class OrgansOperator{
         self::$_Asm_Result  = $StandardAsmResultArray[$sec];       
 	}
 
+	// 根据 下标 直接获取
+	public static function Get($num){
+		return isset(self::$_Asm_Result[$num])?self::$_Asm_Result[$num]:NULL;
+	}
 
-    //根据 双链表 单位 返回 organ 单位
-	//params:
+
+ 	// 根据 双链表 单位 返回 organ 单位
+	// params:
 	//         $unit:     DList' unit (array)
 	//         $branch: CODE | USABLE | FAT
 	//         $status: sub index  
@@ -45,7 +50,7 @@ class OrgansOperator{
 //用于 准备 的 函数 集
 
 class ReadyFunc{
-
+	
 	//////////////////////////////////////////////////////
 	// 1 去掉 所有可用记录 中的 空 行 
 	// 2 使用 可用内存记录索引数组，一种可用内存 具体描述 保存在索引中，使用的地方都是调用
@@ -570,7 +575,7 @@ class ReadyFunc{
 				}elseif ($d === 2){
 					$soul_usable[$sec][$c_exec_thread_list[$c]]['next'][STACK] = false;
 				}elseif ($d === 1){
-					//echo "<br>fuck $a  $c ".$c_exec_thread_list[$c];
+					
 					//var_dump ($soul_usable[$sec][$c_exec_thread_list[$c]]);
 					$soul_usable[$sec][$c_exec_thread_list[$c]]['prev'][STACK] = false;
 					//var_dump ($soul_usable[$sec][$c_exec_thread_list[$c]]);
@@ -869,22 +874,19 @@ class ReadyFunc{
 	//
 	private static function deal_exec_thread_list_get($c_line,$c_asm_array,$c_thread_id,$c_bound_end,$c_solid_jmp_to,&$exec_thread_list,$list_id,&$c_enumming_array,&$list_id_ptr,&$jmp_back_record,&$bound_start){
 		
-	
-
-
 		while ($c_line < $c_bound_end){
 			if (isset($c_asm_array[$c_line])){
+				$old = $exec_thread_list[$c_thread_id][$list_id];
 				$exec_thread_list[$c_thread_id][$list_id][] = $c_line;
 
 				if (Instruction::isJmp($c_asm_array[$c_line][OPERATION],1)){ //条件跳转			    
 					$list_id_ptr ++;
 					$exec_thread_list[$c_thread_id][$list_id_ptr] = $exec_thread_list[$c_thread_id][$list_id];
-					$c_enumming_array[$list_id_ptr] = $c_line + 1;		    
+					$c_enumming_array[$list_id_ptr] = $c_line + 1;	    
 					if ($c_solid_jmp_to[$c_line]){ //有明确跳转 dest
-						if ($c_solid_jmp_to[$c_line] <= $c_line){ //回跳记录
-							if (!isset($jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]])){
-								$jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]] = true;
-							}else{
+						if ($c_solid_jmp_to[$c_line] <= $c_line){ //回跳记录							
+							if (false !== array_search($c_line,$old)){
+								$exec_thread_list[$c_thread_id][$list_id][] = '-'; //跳转标志
 								return;
 							}
 						}
@@ -892,7 +894,7 @@ class ReadyFunc{
 						$c_line = $c_solid_jmp_to[$c_line];
 						continue;					
 					}else{      //无明确跳转  dest 
-						//echo "<br> fuck $c_thread_id $c_line";
+						// echo "<br> no jmp Dest $c_thread_id $c_line";
 						return;
 					}
 				}
@@ -907,9 +909,8 @@ class ReadyFunc{
 					}
 					if ((isset($c_solid_jmp_to[$c_line])) and ($c_solid_jmp_to[$c_line])){ //有明确跳转 dest
 						if ($c_solid_jmp_to[$c_line] <= $c_line){ //回跳记录
-							if (true !== $jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]]){
-								$jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]] = true;
-							}else{
+							if (false !== array_search($c_line,$old)){
+								$exec_thread_list[$c_thread_id][$list_id][] = '-'; //跳转标志
 								return;
 							}
 						}				
@@ -1908,13 +1909,14 @@ class ReadyFunc{
 			$soul_writein_Dlinked_List[$num]['len'] = 0; //标号长度为0 byte
 			$label_index --;
 		}else{
-			global $c_Asm_Result;
 			global $p_sec_abs;
-
 			if (isset($p_sec_abs[$asm])){ //保护段，默认为 ip/sp
 				$soul_writein_Dlinked_List[$num]['ipsp'] = true;
-			}elseif (GeneralFunc::is_effect_ipsp($c_Asm_Result[$asm])){ //识别指令 是否影响 IP/SP
-				$soul_writein_Dlinked_List[$num]['ipsp'] = true;
+			}else{
+				$c_asm = OrgansOperator::Get($asm);
+				if (GeneralFunc::is_effect_ipsp($c_asm)){ //识别指令 是否影响 IP/SP
+					$soul_writein_Dlinked_List[$num]['ipsp'] = true;
+				}
 			}
 
 			$soul_writein_Dlinked_List[$num][C] = $asm;
@@ -1926,7 +1928,7 @@ class ReadyFunc{
 		$num ++;
 	}
 
-	public static function generat_soul_writein_Dlinked_List(&$soul_writein_Dlinked_List,$a,$b,&$num,&$prev,$c_solid_jmp_array){	
+	public static function generat_soul_writein_Dlinked_List(&$soul_writein_Dlinked_List,$a,&$num,&$prev,$c_solid_jmp_array){	
 
 		if (isset($c_solid_jmp_array[$a])){ //标号
 			foreach ($c_solid_jmp_array[$a] as $z => $y){

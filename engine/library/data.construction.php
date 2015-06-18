@@ -52,7 +52,7 @@ class ConstructionDlinkedListOpt{
 	public static function init($c_soul_writein_Dlinked_List_Total,$c_rel_jmp_range,$c_rel_jmp_pointer){
 	    self::$_soul_writein_Dlinked_List = $c_soul_writein_Dlinked_List_Total['list'];	
 		self::$_s_w_Dlinked_List_index    = $c_soul_writein_Dlinked_List_Total['index'];
-		self::$_soul_writein_Dlinked_List_start = 0; //顺序写入双向链表 起始 位 编号 | 未被多态|混淆 ，肯定为 [0]
+		self::$_soul_writein_Dlinked_List_start = DEFAULT_DLIST_FIRST_NUM;
 		self::$_c_rel_jmp_range = $c_rel_jmp_range;
 		self::$_c_rel_jmp_pointer = $c_rel_jmp_pointer;
 		self::$_c_usable_oplen = false;              //可用代码长度限制 剩余值 (设置为false 代表不限制代码长度)
@@ -103,35 +103,42 @@ class ConstructionDlinkedListOpt{
 	public static function ReadRollingDlinkedList(){
 	    return self::$_rollback_soul_writein_Dlinked_List;
 	}
-
-    //获取2单位间所有单位，按次序排列
-    public static function getAmongObjs($a,$b){		
-		if ($a == $b){
-		    return array(1 => $a);
-		}		
-		$objs = self::seekNextObj($a,$b);
-        if (false === $objs){
-			$objs = self::seekNextObj($b,$a);
-		}
-        return $objs;		
-	}
-	private static function seekNextObj($c,$target){
+	// 获取2单位间所有单位,按次序排列, 注: 输入位置未按序
+	public static function getAmongObjs($a,$b){
+		$flag = 0;
+		$i = 1;
 		$objs = array();
-		$objs[1] = $c;
-		while (false !== self::$_soul_writein_Dlinked_List[$c][N]){			
-			// var_dump ($c);
-			// var_dump ($target);
-		    $c = self::$_soul_writein_Dlinked_List[$c][N];
-			$objs[] = $c;
-            if ($c == $target){
+		$c = self::$_soul_writein_Dlinked_List_start;
+		do{
+			if ($a == $c){
+				$flag ++;
+			}
+			if ($b == $c){
+				$flag ++;
+			}
+			if (0 < $flag){
+				$objs[$i] = $c;
+				$i ++;
+			}
+			if ($flag > 1){
 				return $objs;
-			}  
-		}	    
+			}
+			$c = self::$_soul_writein_Dlinked_List[$c][N];
+		}while (false !== $c);
 		return false;
 	}
+	// 获取当前链表中所有单位编号
+	public static function getAllUnits(){
+		$ret = array();
+		$c = self::$_soul_writein_Dlinked_List_start;
+		do{
+			$ret[] = $c;
+			$c = self::$_soul_writein_Dlinked_List[$c][N];
+		}while (false !== $c);
 
-	////////////////////////////////////////////////////////////////////////////////////////////
-	//
+		return $ret;
+	}
+	// 有效单位编号
 	public static function isValidID($id){
 		if (isset(self::$_soul_writein_Dlinked_List[$id])){
 		    if (!isset(self::$_soul_writein_Dlinked_List[$id]['302'])){
@@ -141,8 +148,7 @@ class ConstructionDlinkedListOpt{
 	    return false;
 	}
 
-    ////////////////////////////////////////////////////////////////////////////////////////////	
-	//读取指定unit 的 $_c_rel_jmp_pointer 值
+    // 读取指定unit 的 $_c_rel_jmp_pointer 值
 	public static function ReadRelJmpPointer($unit=false){
 		if (false === $unit){
 			return self::$_c_rel_jmp_pointer;    
@@ -253,11 +259,7 @@ class ConstructionDlinkedListOpt{
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	//双向链表 $soul_writein_Dlinked_List 及 链表指针 $s_w_Dlinked_List_index 操作函数s
-    
-    // 判断链表单位是否有效
-	public static function issetDlinkedListUnit($key,$skey){
-	    return (isset(self::$_soul_writein_Dlinked_List[$key][$skey]));
-	}
+   
 	// 强制重置链表链接
 	public static function relinkUnit($prev,$next){
 		self::linkUnit($prev,$next);	    
@@ -265,19 +267,57 @@ class ConstructionDlinkedListOpt{
 	// 链表单位设值
 	public static function setDlinkedList($obj,$key,$value){
 		self::$_soul_writein_Dlinked_List[$obj][$key] = $value;
-	}
-	// 读取 链表单位
-    public static function getDlinkedList(){
-        $arg = func_get_args();
-		$num = func_num_args();
-		if (1 == $num){
-		    return self::$_soul_writein_Dlinked_List[$arg[0]];
-		}elseif (2 == $num){
-		    return self::$_soul_writein_Dlinked_List[$arg[0]][$arg[1]];
-		}elseif (3 == $num){
-		    return self::$_soul_writein_Dlinked_List[$arg[0]][$arg[1]][$arg[2]];
-		}
 	}	
+	// 获取 链表单位
+	public static function getUnit($unit){
+		return isset(self::$_soul_writein_Dlinked_List[$unit])
+					?self::$_soul_writein_Dlinked_List[$unit]
+					:false;
+	}
+	// 链表单位是否影响ipsp
+	public static function isIPSPUnit($unit){
+		if (self::labelUnit($unit)){
+			return true;
+		}
+		if (isset(self::$_soul_writein_Dlinked_List[$unit]['ipsp'])){
+			return self::$_soul_writein_Dlinked_List[$unit]['ipsp']?true:false;
+		}
+		return false;
+	}
+	// 获取 下个链表单位
+	public static function nextUnit($unit){
+		if (!$unit){
+			return self::$_soul_writein_Dlinked_List_start;
+		}
+		return isset(self::$_soul_writein_Dlinked_List[$unit][N])
+					?self::$_soul_writein_Dlinked_List[$unit][N]
+					:false;
+	}
+	// 获取 上个链表单位
+	public static function prevUnit($unit){
+		return isset(self::$_soul_writein_Dlinked_List[$unit][P])
+					?self::$_soul_writein_Dlinked_List[$unit][P]
+					:false;
+	}
+	// 获取单位长度
+	public static function lenUnit($unit){
+		return isset(self::$_soul_writein_Dlinked_List[$unit]['len'])
+					?self::$_soul_writein_Dlinked_List[$unit]['len']
+					:0;
+	}
+	// 获取单位LABEL
+	public static function labelUnit($unit){
+		return isset(self::$_soul_writein_Dlinked_List[$unit][LABEL])
+					?self::$_soul_writein_Dlinked_List[$unit][LABEL]
+					:false;
+	}
+	// 获取单位rel_jmp
+	public static function reljmpUnit($unit){
+		return isset(self::$_soul_writein_Dlinked_List[$unit]['rel_jmp'])
+					?self::$_soul_writein_Dlinked_List[$unit]['rel_jmp']
+					:false;
+	}
+
 	// 摘除 双向 链表 中的 指定单位 
 	public static function remove_from_DlinkedList($c_lp){
 
@@ -326,6 +366,26 @@ class ConstructionDlinkedListOpt{
 		}else{
 			self::$_soul_writein_Dlinked_List[$next][P] = $prev;
 		}
+	}
+	// 
+	public static function show(){
+		$c = self::$_soul_writein_Dlinked_List_start;
+		echo '<table border=1>';
+		echo '<tr><td>No.</td><td>len</td><td>C</td><td>Organ</td></tr>';
+		while ($c){			
+			$u = self::getUnit($c);
+			echo '<tr>';
+			echo '<td>'."$c".'</td>';
+			echo '<td>'.$u['len'].'</td>';
+			echo '<td>'.$u[C].'</td>';
+			echo '<td>';
+			OrgansOperator::show($u[C]);
+			echo '</td>';
+			echo '</tr>';
+			$c = self::nextUnit($c);
+		}
+		echo '</table>';
+
 	}
 }
 

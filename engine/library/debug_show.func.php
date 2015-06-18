@@ -91,7 +91,6 @@ class DebugShowFunc{
 	//显示骨架(预分配方案(ipsp已完成)，以及STACK冲突判断结果)
 	public static function my_shower_05($c_bone_model,$bone_obj,$stack_unusable,$isConflict,$conflict_position){
 		// global $soul_writein_Dlinked_List;
-		// $soul_writein_Dlinked_List = ConstructionDlinkedListOpt::getDlinkedListTotal();
 		echo "<br>============= 显示骨架(预分配方案(ipsp已完成)，以及STACK冲突判断结果) ============= <br>";
 		
 		if (!$isConflict){
@@ -132,7 +131,7 @@ class DebugShowFunc{
 						echo '<td>';
 						echo "$z".'</td><td>';
 						echo "$y".'</td><td>';	
-						$current = ConstructionDlinkedListOpt::getDlinkedList($y);
+						$current = ConstructionDlinkedListOpt::getUnit($y);
 						if (isset($current[POLY])){
 						   echo '[多态]';
 						}elseif (isset($current[BONE])){
@@ -146,7 +145,7 @@ class DebugShowFunc{
 						if (isset($current[LABEL])){
 							var_dump ($current[LABEL]);
 						}
-						$jj = ConstructionDlinkedListOpt::getDlinkedList($y);
+						$jj = ConstructionDlinkedListOpt::getUnit($y);
 						$x[CODE]    = OrgansOperator::GetByDListUnit($jj,CODE);
 						$x[USABLE]  = OrgansOperator::GetByDListUnit($jj,USABLE);
 						var_dump ($x[CODE][OPERATION]);
@@ -265,14 +264,13 @@ class DebugShowFunc{
 	//显示多态 (支持 随机的 强度 表示),取代 function my_shower_02
 	public static function my_shower_03($org_List_index,$c_poly_array){
 		// global $soul_writein_Dlinked_List;
-		// $soul_writein_Dlinked_List = ConstructionDlinkedListOpt::getDlinkedListTotal();
-
+		
 		echo "<br>============= 多态 结构 ===============<br>";
 		//foreach ($StandardAsmResultArray as $a => $b){
 		echo "<br><b>$a</b>";
 		echo '<table border = 1><tr><td>sub tree</td><td>line</td><td>Instruction</td><td>Prev usable</td><td>Next usable</td></tr>';
 		
-		$org_List = ConstructionDlinkedListOpt::getDlinkedList($org_List_index);
+		$org_List = ConstructionDlinkedListOpt::getUnit($org_List_index);
 		if (isset($org_List[POLY])){
 			$type   = '【多】';
 		}elseif (isset($org_List[BONE])){
@@ -566,6 +564,7 @@ class DebugShowFunc{
 		global $flag_register_opt_array;
 		global $valid_mem_opt_array;
 		global $soul_usable;
+		global $Dlink_Soul_Map;
 		
 		global $soul_forbid;
 		global $soul_writein_Dlinked_List_Total;
@@ -590,7 +589,7 @@ class DebugShowFunc{
 			$color = 'white';
 			echo '<table border = 1><tr><td>line</td><td>prefix</td><td>instruction</td><td>p0</td><td>p1</td><td>p2</td><td>normal regs</td><td>flag regs</td><td>valid mem addr</td><td>stack</td><td>ipsp</td></tr>';
 			
-			$c_list = $soul_writein_Dlinked_List_Total[$a]['list'][0];
+			$c_list = $soul_writein_Dlinked_List_Total[$a]['list'][1];
 			while (true){			
 				$c = $c_list[C];
 				$d = $StandardAsmResultArray[$a][$c];
@@ -677,6 +676,13 @@ class DebugShowFunc{
 				///////////////////////////////////////////////////
 				//main
 				echo '<tr bgcolor='."$color".'><td>';
+				echo '[';
+				if (isset($Dlink_Soul_Map[$a][$c])){
+					echo $Dlink_Soul_Map[$a][$c];
+				}else{
+					echo '?';
+				}
+				echo ']';
 				echo "$c";
 				echo '</td><td>';
 

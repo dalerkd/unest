@@ -14,7 +14,7 @@ class ValidMemAddr{
 	}
 	// 是否有写入权限
 	public static function is_writable($id){
-		return (self::$_valid_mem_addr[$id][OPT] > 1)?true:false;
+		return (self::$_valid_mem_addr[$id][OPT] & W)?true:false;
 	}
 	// 设置
 	public static function set($id,$value){
