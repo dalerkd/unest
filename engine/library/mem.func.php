@@ -19,7 +19,7 @@ class ValidMemAddr{
 	// 设置
 	public static function set($id,$value){
 		self::$_valid_mem_addr[$id] = $value;
-	}	
+	}
 	// 读取
 	public static function get($id,$subkey = false){
 		if (false === $subkey){
@@ -27,7 +27,7 @@ class ValidMemAddr{
 		}else{
 			return isset(self::$_valid_mem_addr[$id][$subkey])?self::$_valid_mem_addr[$id][$subkey]:null;
 		}
-	}
+	}	
 	// 新建
 	public static function append($value){
 		self::$_valid_mem_addr[self::$_index] = $value;
@@ -35,8 +35,12 @@ class ValidMemAddr{
 		self::$_index ++;
 		return $i;
 	}
-
-
-
+	// 判断是否涉及某寄存器
+	public static function is_reg_include($id,$reg){
+		if (isset(self::$_valid_mem_addr[$id][REG])){
+			return in_array($reg,self::$_valid_mem_addr[$id][REG]);
+		}
+		return false;
+	}
 }
 ?>

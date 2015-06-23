@@ -728,9 +728,7 @@ class StackBalance{
 				}
 				SteroGraphic::show();
 				// 识别是否可忽略当前范围内register forbid(s)
-				// TODO: 忽略 register forbid 需同时 去掉涉及的usable valid address(s)
 				self::$_work_ignore_forbid = self::isNotReadRegister($effects,$usableRegister);
-				self::$_work_ignore_forbid = false;
 				// 4.insert DList
 				$inserted_list = self::insertDList($result_array,$usableRegister,$i);
 				// 5.add register usable to all effects unit of DList

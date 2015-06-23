@@ -42,6 +42,18 @@ class OrgansOperator{
 				if ($ignor_forbid){
 					unset (self::$_soul_forbid[$unit][$dir][NORMAL][$reg]);
 					self::$_soul_usable[$unit][$dir][NORMAL_WRITE_ABLE][$reg][OPT_BITS] = true;
+					// cancel all mem address valid flag (which include $reg)
+					if (isset(self::$_soul_usable[$unit][$dir][MEM_OPT_ABLE])){
+						$tmp = self::$_soul_usable[$unit][$dir][MEM_OPT_ABLE];
+						foreach ($tmp as $a => $mem_idx){
+							if (ValidMemAddr::is_reg_include($mem_idx,$reg)){
+								unset(self::$_soul_usable[$unit][$dir][MEM_OPT_ABLE][$a]);
+							}
+						}
+						if (empty(self::$_soul_usable[$unit][$dir][MEM_OPT_ABLE])){
+							unset (self::$_soul_usable[$unit][$dir][MEM_OPT_ABLE]);
+						}
+					}
 					return true;
 				}
 			}
