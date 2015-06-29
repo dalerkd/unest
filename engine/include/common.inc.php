@@ -47,13 +47,16 @@ define ('NOTICE'  ,3);
 // 操作权限
 define ('R' , 1);  //只读
 define ('W' , 2);  //只写
-define ('RW', 3);  //读写
+define ('RW', 3);  //读写 R|W
 define ('NP',-1);  //无操作 ? 应改为0 ?
 
 //////////////////////////////////////////
 // 方位 可用位操作符连接
 define ('PREV',1);
 define ('NEXT',2);
+//////////////////////////////////////////
+// stack effects extra
+define ('STACK_EFFECT_1',-1);
 //////////////////////////////////////////
 // inst array index
 define ('PREFIX',           1);

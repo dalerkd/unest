@@ -38,18 +38,18 @@ $inst_alias = array(
 
 // 栈影响指令
 $stack_effects = array(
-	'PUSH'   =>   OPT_BITS / DWORD_BITS,
-	'POP'    => - OPT_BITS / DWORD_BITS,
-	'PUSHA'  =>   8 * OPT_BITS / DWORD_BITS,
-	'POPA'   => - 8 * OPT_BITS / DWORD_BITS,
-	'PUSHAD' =>   8 * 32 / DWORD_BITS,
-	'POPAD'  => - 8 * 32 / DWORD_BITS,
-	'PUSHF'  =>   OPT_BITS / DWORD_BITS,
-	'POPF'   => - OPT_BITS / DWORD_BITS,
-	'PUSHFD' =>   32 / DWORD_BITS,
-	'POPFD'  => - 32 / DWORD_BITS,
-	'PUSHFQ' =>   64 / DWORD_BITS,
-	'POPFQ'  => - 64 / DWORD_BITS,
+	'PUSH'   => array( 1, STACK_EFFECT_1),
+	'POP'    => array(-1, STACK_EFFECT_1),
+	'PUSHA'  => array( 1, 8 * OPT_BITS / DWORD_BITS),
+	'POPA'   => array(-1, 8 * OPT_BITS / DWORD_BITS),
+	'PUSHAD' => array( 1, 8 * 32 / DWORD_BITS),
+	'POPAD'  => array(-1, 8 * 32 / DWORD_BITS),
+	'PUSHF'  => array( 1, OPT_BITS / DWORD_BITS),
+	'POPF'   => array(-1, OPT_BITS / DWORD_BITS),
+	'PUSHFD' => array( 1, 32 / DWORD_BITS),
+	'POPFD'  => array(-1, 32 / DWORD_BITS),
+	'PUSHFQ' => array( 1, 64 / DWORD_BITS),
+	'POPFQ'  => array(-1, 64 / DWORD_BITS),
 );
 // 定长跳转有range限制的
 $range_limit_static_jmp = array(

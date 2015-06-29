@@ -181,11 +181,20 @@ class Instruction{
 		return $ret;	    
 	}
 
-	// 指令对栈的影响(读|写) 0 不影响 | true 影响(但未知) | != 0 影响位数(byte)	
+	// 指令对栈的影响(读|写) 0 不影响 | true 影响(但未知) | != 0 影响字节数(byte)	
 	public static function stackEffect($asm){
-
 		if (isset(self::$_stack_effects[$asm[OPERATION]])){
-			return self::$_stack_effects[$asm[OPERATION]];
+			$sign  = self::$_stack_effects[$asm[OPERATION]][0];
+			$value = self::$_stack_effects[$asm[OPERATION]][1];
+			if (STACK_EFFECT_1 === $value){
+				$value = OPT_BITS / DWORD_BITS;
+				if (isset($asm[P_TYPE][0])){
+					if (('r' === $asm[P_TYPE][0]) or ('m' === $asm[P_TYPE][0])){
+						$value = $asm[P_BITS][0] / DWORD_BITS;
+					}
+				}
+			}
+			return  $sign*$value ;
 		}
 
 		$inst = self::getInstructionOpt($asm[OPERATION],count($asm[PARAMS]));
@@ -196,6 +205,10 @@ class Instruction{
 			foreach ($asm[P_TYPE] as $i => $type){
 				if ('r' === $type){
 					if (STACK_POINTER_REG === Instruction::getGeneralRegIndex($asm[PARAMS][$i])){
+						return true;
+					}
+				}elseif ('m' == $type){
+					if (isset($asm[P_M_REG][$i][STACK_POINTER_REG])){
 						return true;
 					}
 				}
