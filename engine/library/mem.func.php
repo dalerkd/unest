@@ -10,7 +10,7 @@ class ValidMemAddr{
 
 	public static function init ($mem,$idx){
 		self::$_valid_mem_addr = $mem;
-		self::$_index          = $idx;// + 1;
+		self::$_index          = $idx + 1;
 	}
 	// 是否有写入权限
 	public static function is_writable($id){
