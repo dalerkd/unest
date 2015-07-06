@@ -74,7 +74,7 @@ class StackBalance{
 	private static function genIllUnit($units){
 		foreach ($units as $a){
 			$b = ConstructionDlinkedListOpt::getUnit($a);
-			$c = OrgansOperator::GetByDListUnit($b,USABLE);
+			$c = OrgansOperator::getUsable($b[C]);
 			if (!isset($c[P][STACK]) or (true !== $c[P][STACK])){
 				if (isset(self::$_table_1[$a][P])){
 					$i = self::$_table_1[$a][P];
@@ -97,12 +97,14 @@ class StackBalance{
 		if ((isset(self::$_table_1[$b][P])) and (isset(self::$_table_1[$b][N]))){
 			$j = SteroGraphic::get_unit_mono_ids(self::$_table_1[$b][P]);
 			$k = SteroGraphic::get_unit_mono_ids(self::$_table_1[$b][N]);
-			$z = array_intersect($j, $k);
-			if (!empty($z)){
-				$mono = reset($z);
-				$unit_1 = self::$_table_1[$b][P];
-				$unit_2 = self::$_table_1[$b][N];
-				return true;
+			if ((is_array($j)) and (is_array($k))){
+				$z = array_intersect($j, $k);
+				if (!empty($z)){
+					$mono = reset($z);
+					$unit_1 = self::$_table_1[$b][P];
+					$unit_2 = self::$_table_1[$b][N];
+					return true;
+				}
 			}
 		}
 		return false;
@@ -125,7 +127,7 @@ class StackBalance{
 			if (false === $c_dim){
 				break;
 			}			
-			if (isset(self::$_ill_unit[$c_uint])){
+			if (isset(self::$_ill_unit[$c_unit])){
 				continue;
 			}
 			if ($dimRoof >= $c_dim){
@@ -137,19 +139,23 @@ class StackBalance{
 	}	
 	// 搜集方向(Prev or Next)上指定维度的所有单位(except Block mono)
 	private static function collectValidUnit($mono,$direction){
+		$c_unit = 0;
 		if (P === $direction){
-			$c_unit = self::$_work_buff[$mono]['lhs'];			
+			if (isset(self::$_work_buff[$mono]['lhs'])){
+				$c_unit = self::$_work_buff[$mono]['lhs'];
+			}
 		}else{
-			$c_unit = self::$_work_buff[$mono]['rhs'];
+			if (isset(self::$_work_buff[$mono]['rhs'])){
+				$c_unit = self::$_work_buff[$mono]['rhs'];
+			}
 		}
-		// echo "<br>$$$$$$$$$$$$$$$$$$<br>start to collectValidUnit: $mono . $c_unit";
 		$dim = self::$_work_buff[$mono]['dim'];
 		$validUnits = array();
 		$break = false;	
 		while (0 !== $c_unit){
 			// echo "<br>c_unit : $c_unit";			
 			/* ILLEGAL */
-			if (!isset(self::$_ill_unit[$c_uint])){
+			if (!isset(self::$_ill_unit[$c_unit])){
 				/* DIM */
 				$c_dim = SteroGraphic::get_dim($c_unit);
 				if (false === $c_dim){
@@ -202,7 +208,7 @@ class StackBalance{
 								}
 							}
 						}
-						// echo '</font><br>';
+						echo '</font><br>';
 					}
 					if ($break){
 						break;
@@ -548,7 +554,7 @@ class StackBalance{
 	private static function inheritanceUsable($unit,$type,$dst){
 		$tmp = ConstructionDlinkedListOpt::getUnit($unit);
 		if ($tmp){
-			$source_usable = OrgansOperator::GetByDListUnit($tmp,USABLE);
+			$source_usable = OrgansOperator::getUsable($tmp[C]);
 			if (isset($tmp[C])){
 				if ($type){ // pop
 					OrgansOperator::cloneUsables($tmp[C],N,$dst);
@@ -582,7 +588,7 @@ class StackBalance{
 			$dlink_unit = array(
 				'ipsp'  => true,
 				C => $new_idx,
-				COMMENT => ' !sb.'.$loop_num,
+				COMMENT => ',sb>'.$loop_num,
 			);
 			$j = ConstructionDlinkedListOpt::appendNewUnit($cid,$dlink_unit);
 			self::$_GPR_effects[$j][$reg][OPT_BITS] = R;
@@ -608,7 +614,7 @@ class StackBalance{
 			$dlink_unit = array(
 				'ipsp'  => true,
 				C => $new_idx,
-				COMMENT => ' !sb.'.$loop_num,
+				COMMENT => ',sb<'.$loop_num,
 			);
 			$j = ConstructionDlinkedListOpt::appendNewUnit($cid,$dlink_unit);
 			self::$_GPR_effects[$j][$reg][OPT_BITS] = W;

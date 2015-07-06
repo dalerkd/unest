@@ -131,7 +131,7 @@ class GenerateFunc{
 			$ret = false;
 			$tmp = $list;
 			foreach ($tmp as $i => $a){
-				if ((true !== $a['ipsp']) && (!isset($a[LABEL]))){
+				if (((!isset($a['ipsp'])) or (true !== $a['ipsp'])) and (!isset($a[LABEL]))){
 					if (true ===  GeneralFunc::is_effect_ipsp($soul[$a[C]],1,self::$_user_cnf_stack_pointer_define)){
 						$list[$i]['ipsp'] = true;
 						$ret[$i] = true;
@@ -239,10 +239,11 @@ class GenerateFunc{
 		//         一条指令 可 含 多个重定位 (一个参数 至多 一个重定位，如多个，不知不同的exe加载器是否支持对同一地址的多次重定位运算)
 		//         (ready部分限制了源码 一条指令 至多一个重定位，Poly 可导致一条指令 多个重定位)
 		$rel_param_result = false;
-
-		if (is_array($c_obj[PREFIX])){
-			foreach ($c_obj[PREFIX] as $z => $y){
-				$asm .= $y.' ';
+		if (isset($c_obj[PREFIX])){
+			if (is_array($c_obj[PREFIX])){
+				foreach ($c_obj[PREFIX] as $z => $y){
+					$asm .= $y.' ';
+				}
 			}
 		}
 		$asm .= $c_obj[OPERATION].' ';
@@ -250,7 +251,7 @@ class GenerateFunc{
 		$last_params_type = 0;      // 最后参数 是否为 i   |
 		$last_params_cont = "";     // 最后参数            |
 		$mem_bits = 0;              // 内存参数 位数      _| 
-		if (is_array($c_obj[PARAMS])){
+		if ((isset($c_obj[PARAMS]))and(is_array($c_obj[PARAMS]))){
 			foreach ($c_obj[PARAMS] as $z => $y){
 				if ($z){
 					$asm .= ',';
@@ -260,7 +261,7 @@ class GenerateFunc{
 					$rel_param_result[$z]['org'] = $y;				             
 				}
 				
-				if ($c_obj[P_TYPE][$z] == 'm'){        //内存指针 参数，每个指令至多有一条
+				if ((isset($c_obj[P_TYPE][$z]))and($c_obj[P_TYPE][$z] == 'm')){        //内存指针 参数，每个指令至多有一条
 					$mem_bits = $c_obj[P_BITS][$z];
 					//根据位数给内存指针加前缀
 					if ('LEA' !== $c_obj[OPERATION]){  //lea eax,[...]
@@ -276,8 +277,8 @@ class GenerateFunc{
 				$asm .= $y;
 
 				$last_params_cont = $y;                  //最后一个参数
-				$last_params_type = $c_obj[P_TYPE][$z];//最后一个参数 类型
-				$last_params_bits = $c_obj[P_BITS][$z];//最后一个参数 位数
+				$last_params_type = isset($c_obj[P_TYPE][$z])?$c_obj[P_TYPE][$z]:NULL;//最后一个参数 类型
+				$last_params_bits = isset($c_obj[P_BITS][$z])?$c_obj[P_BITS][$z]:NULL;//最后一个参数 位数				
 			}
 		}	
 
@@ -296,7 +297,7 @@ class GenerateFunc{
 				//
 				//当重定位 类型 isMem 且 最后参数为 imm，则重定位 不在末 4位，特殊处理，见 readme.reloc.txt
 				//VirtualAddress
-				if (($c_rel_info[$c_rel_index][$c_rel_copy]['isMem'])&&($last_params_type === 'i')){
+				if ((isset($c_rel_info[$c_rel_index][$c_rel_copy]['isMem']))and($c_rel_info[$c_rel_index][$c_rel_copy]['isMem'])and($last_params_type === 'i')){
 					$asm  = substr($asm,0,strlen($asm) - strlen($last_params_cont));
 					//
 					$last_params_modified_bits = $mem_bits;
@@ -326,18 +327,18 @@ class GenerateFunc{
 					$buf_head .= 'dd '.$c_rel_name.'_label - sec_'."$c_sec".'_start - 4'."$enter_flag";                
 				}
 																						   //SymbolTableIndex
-				$buf_head .= 'dd '.$c_rel_info[$c_rel_index][$c_rel_copy]['SymbolTableIndex']."$enter_flag";  
+				$buf_head .= 'dd '.$c_rel_info[$c_rel_index][$c_rel_copy]['SymbolTableIndex']."$enter_flag";
 				$buf_head .= 'dw '.$c_rel_info[$c_rel_index][$c_rel_copy]['Type']."$enter_flag";//Type
 
 				$reloc_info_2_rewrite_table[$c_sec][] = $c_rel_name;
-				if ($c_rel_info[$c_rel_index][$c_rel_copy]['isLabel']){ //标号
+				if ((isset($c_rel_info[$c_rel_index][$c_rel_copy]['isLabel']))and($c_rel_info[$c_rel_index][$c_rel_copy]['isLabel'])){ //标号
 					str_replace($c_rel_name,' strict '.$c_rel_name.'_label',$asm);
 					$asm = str_replace($c_rel_name,' strict '.$c_rel_name.'_label',$asm);
 					if ($c_rel_info[$c_rel_index][$c_rel_copy]['value'] !== '0'){
 						$non_null_labels[$sec][$c_rel_index][$c_rel_copy] = $c_rel_info[$c_rel_index][$c_rel_copy]['value'];
 					}
 				}else{                                              //参数
-					if ($c_rel_info[$c_rel_index][$c_rel_copy]['isMem']){//内存指针
+					if ((isset($c_rel_info[$c_rel_index][$c_rel_copy]['isMem']))and($c_rel_info[$c_rel_index][$c_rel_copy]['isMem'])){//内存指针
 						$asm = str_replace('[','[DWORD ',$asm);                     //作为内存指针的重定位  强制定位为32位 [DWORD xxx]
 						$asm = str_replace($c_rel_name,'0x'.$c_rel_info[$c_rel_index][$c_rel_copy]['value'],$asm);
 					}else{                                          //常数	
@@ -394,14 +395,20 @@ class GenerateFunc{
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				//prev.fat ? -> 加入脂肪	
 				///*
-				if (OrgansOperator::CheckFatAble($current,1)){
-					$buf .= OrganFat::start(5,$enter_flag,$next,1);
+				if (isset($current[C])){
+					if (OrgansOperator::CheckFatAble($current[C],1)){
+						$buf .= OrganFat::start(5,$enter_flag,$next,1);
+					}
 				}
 				//*/
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				//内容
 				if (defined('DEBUG_ECHO')){
-					$show_len = '[List No:'.$next.'] [len:'.$current['len'].']';
+					$show_len = '['.$next.']{';
+					if (isset($current['len'])){
+						$show_len .= $current['len'];
+					}
+					$show_len .= '}';
 					if (ConstructionDlinkedListOpt::issetRelJmpRange($next)){//	if (isset($c_rel_jmp_range[$next])){
 						$show_len .= '[range (without Fat):';
 						$show_len .= ConstructionDlinkedListOpt::readRelJmpRange($next,'range');
@@ -415,29 +422,31 @@ class GenerateFunc{
 					$buf .= $current[LABEL]."$enter_flag";
 				}else{
 					if (isset($current[COMMENT])){
-						$comment = ';'.$current[COMMENT];
+						$comment = $current[COMMENT];
 					}else{
 						$comment = '';
 						if (isset ($current[POLY])){	
-							$comment = ' ;@@@ poly';
-							if (true === $current[SOUL]){
-								$comment = ' ;@@@ poly [from soul]';
+							$comment = '@@@ poly';
+							if ((isset($current[SOUL]))and(true === $current[SOUL])){
+								$comment = '@@@ poly [from soul]';
 							}						
 						}elseif (isset ($current[BONE])){							
-							$comment = ' ;&&& bone';
+							$comment = '&&& bone';
 						}elseif (isset ($current[MEAT])){	
-							$comment = ' ;*** meat';
+							$comment = '*** meat';
 						}else{
-							$comment = ';### org opt';
+							$comment = '### org opt';
 						}
 					}
-					self::gen_asm_file_kid($a,OrgansOperator::GetByDListUnit($current,CODE),$buf,$buf_head,$enter_flag,$reloc_info_2_rewrite_table,$non_null_labels,$comment.$show_len);					
+					self::gen_asm_file_kid($a,OrgansOperator::getCode($current[C]),$buf,$buf_head,$enter_flag,$reloc_info_2_rewrite_table,$non_null_labels,' ; '.$show_len.$comment);
 				}
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				//next.fat? -> 加入脂肪
 				///*
-				if (OrgansOperator::CheckFatAble($current,2)){
-					$buf .= OrganFat::start(5,$enter_flag,$next,1);
+				if (isset($current[C])){
+					if (OrgansOperator::CheckFatAble($current[C],2)){
+						$buf .= OrganFat::start(5,$enter_flag,$next,1);
+					}
 				}
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 				$next = ConstructionDlinkedListOpt::nextUnit($next);

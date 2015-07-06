@@ -7,6 +7,7 @@ if(!defined('UNEST.ORG')) {
 class OrganMeat{
 	// meat 唯一编号,全目标 唯一
     private static $_index = 1;
+    private static $_c_meats;
 
 	private static $_meat_inst;
 
@@ -103,20 +104,20 @@ class OrganMeat{
 			GeneralFunc::LogInsert($tpl_index.' meat tpl has been loaded less than want: '.MEAT_TPL_PER_TASK,NOTICE);
 		}
 	}
-	// 把生成的血肉 插入 链表
-	private static function insert_into_list($current_forward,$meat_generated,$direct = P){
+	// 把已生成的血肉 插入 链表
+	private static function insert_into_list($current_forward,$direct = P){
 		$prev = false;
 		if (P === $direct){
 			$prev = ConstructionDlinkedListOpt::prevUnit($current_forward);		
 		}else{
 			$prev = $current_forward;
 		}
-		$c_meat = self::$_index - $meat_generated;
-		for (;$c_meat < self::$_index;$c_meat++){
-			$array = array();
-			$array[MEAT] = $c_meat;
-			$array[C]    = 98;
-			if (GenerateFunc::is_effect_ipsp(OrgansOperator::Get(MEAT,$c_meat,CODE,98),0)){
+		foreach (self::$_c_meats as $c_meat){
+			$array = array(
+				C       => $c_meat,
+				COMMENT => ',m'.self::$_index,
+			);
+			if (GenerateFunc::is_effect_ipsp(OrgansOperator::getCode($c_meat),0)){
 				$array['ipsp'] = true;
 			}
 			$prev = ConstructionDlinkedListOpt::appendNewUnit($prev,$array);
@@ -418,11 +419,14 @@ class OrganMeat{
 		if (is_array($array)){
 		    foreach ($array as $dir => $a){
 			    foreach ($a as $b){
-					$c = count($b[REG]);
-					self::$_mem_usable_reg_effect[$dir][$access][$c][$b[BITS]][] = $b[REG];
-					if ($c > self::$_max_mem_reg_number){
-						self::$_max_mem_reg_number = $c;
-					}
+			    	$c = 0;
+			    	if (isset($b[REG])){
+			    		$c = count($b[REG]);
+			    		self::$_mem_usable_reg_effect[$dir][$access][$c][$b[BITS]][] = $b[REG];
+						if ($c > self::$_max_mem_reg_number){
+							self::$_max_mem_reg_number = $c;
+						}
+			    	}					
 				}
 			}
 		}	
@@ -714,24 +718,31 @@ class OrganMeat{
 	private static function genValidMemAddr($effects,$access,$bit,$usable,&$P_M_REG,&$REL){
 		global $c_rel_info;
 		$mem_array = array();
-		foreach ($usable[MEM_OPT_ABLE] as $i){
-			$mem = ValidMemAddr::get($i);
-			if ($mem[BITS] >= $bit){
-				if ($mem[OPT] >= $access){
-					$flag = true;
-					foreach ($effects as $reg){
-						if (isset(self::$_reg_allot_result[$reg])){
-							if (false === array_search(self::$_reg_allot_result[$reg],$mem[REG])){
+		if ((isset($usable[MEM_OPT_ABLE])) and (is_array($usable[MEM_OPT_ABLE]))){
+			foreach ($usable[MEM_OPT_ABLE] as $i){
+				$mem = ValidMemAddr::get($i);
+				if ($mem[BITS] >= $bit){
+					if ($mem[OPT] >= $access){
+						$flag = true;
+						foreach ($effects as $reg){
+							if (isset(self::$_reg_allot_result[$reg])){
+								if (isset($mem[REG])){
+									if (false === array_search(self::$_reg_allot_result[$reg],$mem[REG])){
+										$flag = false;
+										break;
+									}
+								}else{
+									$flag = false;
+									break;
+								}
+							}elseif (!CHARA_MEAT_DIRTY){
 								$flag = false;
 								break;
 							}
-						}elseif (!CHARA_MEAT_DIRTY){
-							$flag = false;
-							break;
 						}
-					}
-					if ($flag){
-						$mem_array[] = $i;
+						if ($flag){
+							$mem_array[] = $i;
+						}
 					}
 				}
 			}
@@ -768,17 +779,13 @@ class OrganMeat{
 		if ('r' === $type){
 			if ((empty($effects)) and (CHARA_MEAT_DIRTY)){   // 无影响定义，随机
 				if ($access >= W){	// 无影响定义 且 为写权限 丢弃
-					// if (false !== ($p = self::getRandRegFromNormalWriteable($usable[NORMAL_WRITE_ABLE],$bit))){
-					// 	var_dump ($p);
-					// 	self::$_meat_units[$obj][CODE][98][PARAMS][$p_i] = $p;
-					// 	$ret = true;					
-					// }
+					
 				}else{
 					// echo "<br>******************** $obj $bit<br>";
 					if (false !== ($p = Instruction::getRandomReg($bit))){
 						if (false !== ($p = Instruction::getRegByIdxBits($bit,$p))){
 							// var_dump ($p);
-							self::$_meat_units[$obj][CODE][98][PARAMS][$p_i] = $p;
+							self::$_meat_units[$obj][PARAMS][$p_i] = $p;
 							$ret = true;
 						}
 					}					
@@ -792,7 +799,7 @@ class OrganMeat{
 							}
 						}
 						if (false !== ($p = Instruction::getRegByIdxBits($bit,self::$_reg_allot_result[$a]))){
-							self::$_meat_units[$obj][CODE][98][PARAMS][$p_i] = $p;
+							self::$_meat_units[$obj][PARAMS][$p_i] = $p;
 							$ret = true;
 						}
 					}
@@ -802,26 +809,26 @@ class OrganMeat{
 		}elseif ('m' === $type){
 			if (R > $access){ // invalid mem				
 				if (false !== ($p = self::genInvalidMemAddr($effects))){
-					self::$_meat_units[$obj][CODE][98][PARAMS][$p_i] = $p;
+					self::$_meat_units[$obj][PARAMS][$p_i] = $p;
 					$ret = true;
 				}
 			}else{
 				$P_M_REG = false;
 				$REL     = false;
 				if (false !== ($p = self::genValidMemAddr($effects,$access,$bit,$usable,$P_M_REG,$REL))){
-					self::$_meat_units[$obj][CODE][98][PARAMS][$p_i] = $p;
+					self::$_meat_units[$obj][PARAMS][$p_i] = $p;
 					if (false !== $P_M_REG){
-						self::$_meat_units[$obj][CODE][98][P_M_REG][$p_i] = $P_M_REG;
+						self::$_meat_units[$obj][P_M_REG][$p_i] = $P_M_REG;
 					}
 					if (false !== $REL){
-						self::$_meat_units[$obj][CODE][98][REL][$p_i] = $REL;
+						self::$_meat_units[$obj][REL][$p_i] = $REL;
 					}
 					$ret = true;
 				}
 			}
 		}elseif ('i' === $type){
 			$p = GenerateFunc::rand_interger($bit);
-			self::$_meat_units[$obj][CODE][98][PARAMS][$p_i] = $p['value'];
+			self::$_meat_units[$obj][PARAMS][$p_i] = $p['value'];
 			$ret = true;
 		}		
 		return $ret;		
@@ -833,39 +840,30 @@ class OrganMeat{
 		$bits   = self::$_meat_inst[$inst][self::$_meat_runtime_define[$obj]]['p_bits'];
 		$params = self::$_INST[self::$_C_ARRAY_ID][$obj]['PARAMS'];
 		$inst_access_array = Instruction::getInstructionOpt($inst,count($types));
-		self::$_meat_units[$obj][CODE][98][OPERATION] = $inst;
+		self::$_meat_units[$obj][OPERATION] = $inst;
 		foreach ($types as $i => $a){
 			if (!isset($params[$i])){
 				$params[$i] = array();
 			}
-			self::$_meat_units[$obj][CODE][98][P_TYPE][$i] = $a;
-			self::$_meat_units[$obj][CODE][98][P_BITS][$i] = $bits[$i];
+			self::$_meat_units[$obj][P_TYPE][$i] = $a;
+			self::$_meat_units[$obj][P_BITS][$i] = $bits[$i];
 			if (isset(self::$_meat_inst[$inst][self::$_meat_runtime_define[$obj]]['static'][$i])){ // 固定寄存器
-				self::$_meat_units[$obj][CODE][98][PARAMS][$i] = self::$_meat_inst[$inst][self::$_meat_runtime_define[$obj]]['static'][$i];
+				self::$_meat_units[$obj][PARAMS][$i] = self::$_meat_inst[$inst][self::$_meat_runtime_define[$obj]]['static'][$i];
 			}elseif (false === self::genParams($inst_access_array[$i],$a,$bits[$i],$params[$i],$usable,$obj,$i)){
 				return false;
 			}
 		}		
 		return true;
-	}
-	// 插入meat_result, offered to debug func
-	public static function append($result){
-	    OrgansOperator::Set(MEAT,self::$_index,$result);
-		$ret = self::$_index;
-		self::$_index ++;
-		return $ret;
-	}
+	}	
 	// 完成meat 单位的最终构建(参数,usable)
-	private static function genMeats($objs,$usable){		
+	private static function genMeats($objs,$usable){
+		$c_usable[P] = $usable;
+		$c_usable[N] = $usable;
 		foreach ($objs as $c_obj){
 			if (0 === self::$_meat_units_status[$c_obj]){			
-				if (false !== self::genInstruction($c_obj,$usable)){				
-					self::$_meat_units[$c_obj][USABLE][98][P] = $usable;
-					self::$_meat_units[$c_obj][USABLE][98][N] = $usable;
-					// 对结果进行stack可用状态设置(根据usable)
-					GeneralFunc::soul_stack_set(self::$_meat_units[$c_obj][CODE],self::$_meat_units[$c_obj][USABLE]);
-					// insert into MeatList
-					self::append(self::$_meat_units[$c_obj]);					
+				if (false !== self::genInstruction($c_obj,$usable)){
+					// insert into organs
+					self::$_c_meats[] = OrgansOperator::newUnit(self::$_meat_units[$c_obj],$c_usable);
 				}else{ // gen Inst fail
 					self::$_meat_units_status[$c_obj] = 8;
 				}
@@ -904,133 +902,132 @@ class OrganMeat{
 	}
 	// start
 	public static function start($objs){
+        
+        self::$_index ++;
 
-        // about meat.obj
 		$obj = $objs[1];
 		$b = ConstructionDlinkedListOpt::getUnit($obj);
-		$c_obj    = OrgansOperator::GetByDListUnit($b,CODE);
-		$c_usable = OrgansOperator::GetByDListUnit($b,USABLE);
-		$c_fat    = OrgansOperator::GetByDListUnit($b,FAT);
+		$c_unit   = $b[C];
 
-        // usable of meat.obj
-		self::get_mem_access($c_usable,P);
-		self::get_mem_access($c_usable,N);	
-        // calculate mem usable  
-		self::gen_mem_usable_reg_effect(self::$_mem_readable_array,R);
-		self::gen_mem_usable_reg_effect(self::$_mem_writable_array,W);		
-        // 可用meat.tpl中rand一个当前任务用
-		self::$_C_ARRAY_ID = GeneralFunc::my_array_rand(self::$_MATCH);
-        // 随机获取 & 分配 meat.units
-		$split_point = self::get_split_point($c_obj[OPERATION]);
-		$rate = Character::getAllRate($obj);
-		$meat_strength = ($rate[MEAT] > 1)?$rate[MEAT]:1;
-		$split_size  = rand (1,$meat_strength * MEAT_MAX_SINGLE_UNIT);
-		if (!$c_fat){
-			$front_meat_num  = rand (0,$split_size);			
-		}elseif (1 == $c_fat){
-			$front_meat_num  = 0;
-		}else{
-			$front_meat_num  = $split_size;
-		}
-		$behind_meat_num = $split_size - $front_meat_num;
-		// echo
-		if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
-			self::meat_shower_01($obj,$c_obj,$c_usable,$c_fat,$split_point,$split_size,$meat_strength,$front_meat_num,$behind_meat_num);
-			self::meat_shower_04();
-			echo '<br>Max count reg number in Mem: <b>'.self::$_max_mem_reg_number.'</b><br>';
-			self::meat_shower_05();
-		}
-		// 分配meat.units
-		$tmp  = self::collectMeatUnits($front_meat_num,$split_point,-1,$c_usable[P]);
-        $tmp  = array_reverse($tmp,true);
-		$front_index  = array_keys($tmp);
-		self::$_meat_units_status += $tmp;
+		$c_obj    = OrgansOperator::getCode($b[C]);
+		$c_usable = OrgansOperator::getUsable($b[C]);
+		$c_fat    = OrgansOperator::getFat($b[C]);
 
-		$tmp = self::collectMeatUnits($behind_meat_num,$split_point,1,$c_usable[N]);	
-		$behind_index = array_keys($tmp);
-		self::$_meat_units_status += $tmp;
-		self::$_meat_units_status[$split_point] = 99;
-		// meat.obj 自身包含的reg -> 分配列表
-		if (isset(self::$_INST[self::$_C_ARRAY_ID][$split_point]['PARAMS'])){
-			foreach (self::$_INST[self::$_C_ARRAY_ID][$split_point]['PARAMS'] as $a => $b){
-				$r = array();
-				if (isset($c_obj[P_TYPE])){
-					if ('m' === $c_obj[P_TYPE][$a]){
-					    $r = array_keys($c_obj[P_M_REG][$a]);
-					}
-					if ('r' === $c_obj[P_TYPE][$a]){
-						$r[] = $c_obj[PARAMS][$a];
-					}
+		if (isset($c_obj[OPERATION])){
+
+	        // usable of meat.obj
+			self::get_mem_access($c_usable,P);
+			self::get_mem_access($c_usable,N);	
+	        // calculate mem usable  
+			self::gen_mem_usable_reg_effect(self::$_mem_readable_array,R);
+			self::gen_mem_usable_reg_effect(self::$_mem_writable_array,W);		
+	        // 可用meat.tpl中rand一个当前任务用
+			self::$_C_ARRAY_ID = GeneralFunc::my_array_rand(self::$_MATCH);
+	        // 随机获取 & 分配 meat.units
+			$split_point = self::get_split_point($c_obj[OPERATION]);
+			$rate = Character::getAllRate($obj);
+			$meat_strength = ($rate[MEAT] > 1)?$rate[MEAT]:1;
+			$split_size  = rand (1,$meat_strength * MEAT_MAX_SINGLE_UNIT);
+			if (!$c_fat){
+				$front_meat_num  = rand (0,$split_size);			
+			}elseif (1 == $c_fat){
+				$front_meat_num  = 0;
+			}else{
+				$front_meat_num  = $split_size;
+			}
+			$behind_meat_num = $split_size - $front_meat_num;
+			// echo
+			if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
+				self::meat_shower_01($obj,$c_obj,$c_usable,$c_fat,$split_point,$split_size,$meat_strength,$front_meat_num,$behind_meat_num);
+				self::meat_shower_04();
+				echo '<br>Max count reg number in Mem: <b>'.self::$_max_mem_reg_number.'</b><br>';
+				self::meat_shower_05();
+			}
+			// 分配meat.units
+			$tmp  = self::collectMeatUnits($front_meat_num,$split_point,-1,$c_usable[P]);
+	        $tmp  = array_reverse($tmp,true);
+			$front_index  = array_keys($tmp);
+			self::$_meat_units_status += $tmp;
+
+			$tmp = self::collectMeatUnits($behind_meat_num,$split_point,1,$c_usable[N]);	
+			$behind_index = array_keys($tmp);
+			self::$_meat_units_status += $tmp;
+			self::$_meat_units_status[$split_point] = 99;
+			// meat.obj 自身包含的reg -> 分配列表
+			if (isset(self::$_INST[self::$_C_ARRAY_ID][$split_point]['PARAMS'])){
+				foreach (self::$_INST[self::$_C_ARRAY_ID][$split_point]['PARAMS'] as $a => $b){
+					$r = array();
+					if (isset($c_obj[P_TYPE])){
+						if ('m' === $c_obj[P_TYPE][$a]){
+							if (isset($c_obj[P_M_REG][$a])){
+							    $r = array_keys($c_obj[P_M_REG][$a]);
+							}
+						}
+						if ('r' === $c_obj[P_TYPE][$a]){
+							$r[] = $c_obj[PARAMS][$a];
+						}
+					}				
+					foreach ($b as $c => $d){
+						self::$_param_num_array[$split_point][$a]    = self::$_param_num;
+						self::$_param_to_inst_num[self::$_param_num] = $split_point;
+						self::$_param_to_original_num[self::$_param_num][]  = $d;
+						foreach ($r as $e => $f){
+							self::$_reg_effect_result_array[$d][$f][] = self::$_param_num;
+
+						}
+						self::$_param_num ++;
+					}			
 				}
-				// var_dump ($r);
-				foreach ($b as $c => $d){
-					self::$_param_num_array[$split_point][$a]    = self::$_param_num;
-					self::$_param_to_inst_num[self::$_param_num] = $split_point;
-					self::$_param_to_original_num[self::$_param_num][]  = $d;
-					foreach ($r as $e => $f){
-						self::$_reg_effect_result_array[$d][$f][] = self::$_param_num;
-
-					}
-					self::$_param_num ++;
-				}			
 			}
-		}
-		// 构造reg分配列表
-        self::genEffectResultArray($front_index ,$c_usable[P],P);
-		self::genEffectResultArray($behind_index,$c_usable[N],N);
-		// var_dump (self::$_mem_scheme_ready);
-		// 根据 $_mem_scheme_ready 生成 $_mem_usable_scheme
-		self::gen_mem_usable_scheme();
-		// var_dump (self::$_mem_usable_scheme_index);
-		// var_dump (self::$_mem_usable_scheme);
+			// 构造reg分配列表
+	        self::genEffectResultArray($front_index ,$c_usable[P],P);
+			self::genEffectResultArray($behind_index,$c_usable[N],N);
+			// var_dump (self::$_mem_scheme_ready);
+			// 根据 $_mem_scheme_ready 生成 $_mem_usable_scheme
+			self::gen_mem_usable_scheme();
+			// var_dump (self::$_mem_usable_scheme_index);
+			// var_dump (self::$_mem_usable_scheme);
 
-		// mem 操作权重
-		self::$_chara_meat_mem_prefer = rand(CHARA_MEAT_MEM_PREFER_MIN,CHARA_MEAT_MEM_PREFER_MAX);
+			// mem 操作权重
+			self::$_chara_meat_mem_prefer = rand(CHARA_MEAT_MEM_PREFER_MIN,CHARA_MEAT_MEM_PREFER_MAX);
 
-		self::opt_reg_effect_counter_init();
-		
-		if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
-			self::meat_shower_06();
-			echo "<br>HARA_MEAT_MEM_PREFER: ".self::$_chara_meat_mem_prefer.'<br>';
-			if (!empty(self::$_mem_reg_friends)){
-				// var_dump (self::$_mem_reg_friends);
-				// var_dump (self::$_mem_reg_friends_index);
-				self::meat_shower_09();
+			self::opt_reg_effect_counter_init();
+			
+			if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
+				self::meat_shower_06();
+				echo "<br>HARA_MEAT_MEM_PREFER: ".self::$_chara_meat_mem_prefer.'<br>';
+				if (!empty(self::$_mem_reg_friends)){
+					// var_dump (self::$_mem_reg_friends);
+					// var_dump (self::$_mem_reg_friends_index);
+					self::meat_shower_09();
+				}
+				echo '<br><b>- init</b> 指令编号:<b>指令行号</b>';
+				self::meat_shower_03(self::$_reg_effect_result_array);
+				echo '<br><b>final Result before Reg Distribution</b>';
+				self::meat_shower_07(self::$_reg_effect_counter);
 			}
-			echo '<br><b>- init</b> 指令编号:<b>指令行号</b>';
-			self::meat_shower_03(self::$_reg_effect_result_array);
-			echo '<br><b>final Result before Reg Distribution</b>';
-			self::meat_shower_07(self::$_reg_effect_counter);
-		}
 
-		// 分配reg
-        self::reg_allot();
+			// 分配reg
+	        self::reg_allot();
 
-        // 生成 最终指令
-        $start_index = self::$_index;
-        self::genMeats($front_index ,$c_usable[P]);
-        if ($start_index < self::$_index){
-        	// var_dump (OrgansOperator::Printer());
-        	// var_dump (self::$_meat_units);
-        	
-            self::insert_into_list($obj,self::$_index - $start_index,P);
-            // self::insert_into_list($start_index,P);
-        }
+	        // 生成 最终指令 and insert into Organ/DList Array
+			self::$_c_meats = array();
+	        self::genMeats($front_index ,$c_usable[P]);
+	        if (!empty(self::$_c_meats)){
+	            self::insert_into_list($obj,P);
+	        }
 
-        $start_index = self::$_index;
-        self::genMeats($behind_index,$c_usable[N]);
-        if ($start_index < self::$_index){
-        	// var_dump (OrgansOperator::Printer());
-        	
-        	self::insert_into_list($obj,self::$_index - $start_index,N);
-            // self::insert_into_list($start_index,N);
-        }
-	
-        if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
-        	self::meat_shower_08();
-			self::meat_shower_02($front_index,$split_point,$c_obj,$behind_index);
-		}		
+	        self::$_c_meats = array();
+	        self::genMeats($behind_index,$c_usable[N]);
+	        if (!empty(self::$_c_meats)){
+	        	self::insert_into_list($obj,N);
+	        }
 		
+	        if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
+	        	self::meat_shower_08();
+				self::meat_shower_02($front_index,$split_point,$c_obj,$behind_index);
+			}		
+		}
 		self::task_variable_flush();
 
 
@@ -1182,7 +1179,9 @@ class OrganMeat{
 				echo '</td><td>';
 				echo $a;
 				echo '</td><td>';
-				var_dump ($b[REG]);
+				if (isset($b[REG])){
+					var_dump ($b[REG]);
+				}
 				echo '</td><td>';
 				echo $b[BITS];
 				echo '</td><td>';
@@ -1289,13 +1288,17 @@ class OrganMeat{
 				var_dump (self::$_INST[self::$_C_ARRAY_ID][$a]['P_TYPE']);
 			echo '</td><td>';
 			if (1 !== $b)
-				var_dump (self::$_meat_inst[$c_opt][self::$_meat_runtime_define[$a]]['p_type']);
+				if ((isset(self::$_meat_runtime_define[$a]))and(isset(self::$_meat_inst[$c_opt][self::$_meat_runtime_define[$a]]['p_type']))){
+					var_dump (self::$_meat_inst[$c_opt][self::$_meat_runtime_define[$a]]['p_type']);
+				}
 			echo '</td><td>';
 			if (1 !== $b)
 				var_dump (self::$_INST[self::$_C_ARRAY_ID][$a]['P_BITS']);
 			echo '</td><td>';
 			if (1 !== $b)
-				var_dump (self::$_meat_inst[$c_opt][self::$_meat_runtime_define[$a]]['p_bits']);
+				if (isset(self::$_meat_runtime_define[$a])){
+					var_dump (self::$_meat_inst[$c_opt][self::$_meat_runtime_define[$a]]['p_bits']);
+				}
 			echo '</td><td>';
 			if (1 !== $b)
 				var_dump (self::$_INST[self::$_C_ARRAY_ID][$a]['PARAMS']);				
@@ -1303,7 +1306,7 @@ class OrganMeat{
 			if ($b > 0){
 				echo "<b>$b</b>";	
 			}else{
-				var_dump (self::$_meat_units[$a][CODE][98]);
+				var_dump (self::$_meat_units[$a]);
 			}
 			echo '</td>';
 			echo '</tr>';

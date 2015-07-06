@@ -55,9 +55,11 @@ class ConstructionDlinkedListOpt{
 		self::$_soul_writein_Dlinked_List_start = DEFAULT_DLIST_FIRST_NUM;
 		self::$_c_rel_jmp_range = $c_rel_jmp_range;
 		self::$_c_rel_jmp_pointer = $c_rel_jmp_pointer;
-		self::$_c_usable_oplen = false;              //可用代码长度限制 剩余值 (设置为false 代表不限制代码长度)
-
+		self::$_c_usable_oplen = false; // 可用代码长度限制 剩余值 (设置为false 代表不限制代码长度)
 		self::$_forbid_rel_jmp = array();
+		foreach (self::$_soul_writein_Dlinked_List as $key => $value){			
+			self::$_soul_writein_Dlinked_List[$key][COMMENT] = ',s'.$value[C];
+		}
 	}
 
 	//准备回滚
@@ -153,7 +155,7 @@ class ConstructionDlinkedListOpt{
 		if (false === $unit){
 			return self::$_c_rel_jmp_pointer;    
 		}
-	    return self::$_c_rel_jmp_pointer[$unit];
+	    return (isset(self::$_c_rel_jmp_pointer[$unit]))?self::$_c_rel_jmp_pointer[$unit]:array();
 	}
 	//
 	public static function SetRelJmpPointer($unit,$key,$value){
@@ -259,7 +261,11 @@ class ConstructionDlinkedListOpt{
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	//双向链表 $soul_writein_Dlinked_List 及 链表指针 $s_w_Dlinked_List_index 操作函数s
-   
+    
+    // get comment
+    public static function getComment($unit){
+    	return isset(self::$_soul_writein_Dlinked_List[$unit][COMMENT])?self::$_soul_writein_Dlinked_List[$unit][COMMENT]:'';
+    }
 	// 强制重置链表链接
 	public static function relinkUnit($prev,$next){
 		self::linkUnit($prev,$next);	    

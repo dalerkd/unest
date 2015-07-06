@@ -259,7 +259,7 @@ class Instruction{
 	}
 
     public static function getJmpRangeLmt($inst){
-	    return self::$_range_limit_static_jmp[$inst];
+	    return (isset(self::$_range_limit_static_jmp[$inst]))?self::$_range_limit_static_jmp[$inst]:0;
 	}
 
 	public static function isCantDealInst($inst){

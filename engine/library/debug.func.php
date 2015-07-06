@@ -81,12 +81,14 @@ class DebugFunc{
 			}
 		}
 
-		if (false !== $result){
-			$c_meat_index = OrganMeat::append($result);//$meat_result_array[$UNIQUE_meat_index] = $result;				
-			foreach ($result[CODE] as $a => $b){
-				$array = array();
-				$array[MEAT] = $c_meat_index;
-				$array[C]    = $a;				
+		if (false !== $result){			
+			foreach ($result[CODE] as $b){
+				$c_meat_index = OrgansOperator::newUnit($b);
+
+				$array = array(
+					C => $c_meat_index,
+					COMMENT => ',gen4debug01',
+				);
 
 				$prev = ConstructionDlinkedListOpt::appendNewUnit($prev,$array);
 			} 			
@@ -107,7 +109,7 @@ class DebugFunc{
 
 				$n_lp = ConstructionDlinkedListOpt::nextUnit($c_lp);
 
-				$c_usable = OrgansOperator::Get(SOUL,$current[C],USABLE);
+				$c_usable = OrgansOperator::getUsable($current[C]);
 				
 				if (false !== $c_usable[P]){
 					//echo "<br>prev $c_lp   -> $p_lp";

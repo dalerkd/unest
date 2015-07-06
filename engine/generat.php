@@ -29,6 +29,9 @@ register_shutdown_function('shutdown_except');
 
 //init()
 Instruction::init();
+if (!isset($argv)){
+	$argv = array();
+}
 CfgParser::get_params($argv,1); //同时支持$_GET/$_POST/命令行输入 的参数
 Character::init();
 OrganPoly::init();
@@ -45,23 +48,23 @@ if (!GeneralFunc::LogHasErr()){
 			//////////////////////////////////////////
 			//organ debug echo
 			if ((isset($a['all'])) or (isset($a['bone']))){
-				define (BONE_DEBUG_ECHO,true);
+				define ('BONE_DEBUG_ECHO',true);
 				echo "<br><font color=blue><b>* BONE_DEBUG_ECHO</b></font>";
 			}
 			if ((isset($a['all'])) or (isset($a['meat']))){
-				define (MEAT_DEBUG_ECHO,true);
+				define ('MEAT_DEBUG_ECHO',true);
 				echo "<br><font color=blue><b>* MEAT_DEBUG_ECHO</b></font>";
 			}
 			if ((isset($a['all'])) or (isset($a['poly']))){
-				define (POLY_DEBUG_ECHO,true);
+				define ('POLY_DEBUG_ECHO',true);
 				echo "<br><font color=blue><b>* POLY_DEBUG_ECHO</b></font>";
 			}
 			if ((isset($a['all'])) or (isset($a['sec']))){
-				define (SEC_DEBUG_ECHO,true);
+				define ('SEC_DEBUG_ECHO',true);
 				echo "<br><font color=blue><b>* SEC_DEBUG_ECHO</b></font>";
 			}
 			if ((isset($a['all'])) or (isset($a['char']))){
-				define (CHARACTER_DEBUG_ECHO,true);
+				define ('CHARACTER_DEBUG_ECHO',true);
 				echo "<br><font color=blue><b>* CHARACTER_DEBUG_ECHO</b></font>";
 			}			
 		}
@@ -159,7 +162,7 @@ if (!GeneralFunc::LogHasErr()){
 	CfgParser::reconfigure_soul_usable ($sec_name,$soul_writein_Dlinked_List_Total,$soul_usable,$soul_forbid); //usable
 
 	if (defined('DEBUG_ECHO') and defined('SEC_DEBUG_ECHO')){
-		DebugShowFunc::my_shower_01($CodeSectionArray,$StandardAsmResultArray,$exec_thread_list);
+		DebugShowFunc::my_shower_01($CodeSectionArray,$StandardAsmResultArray,NULL);
 	}		
 
 	//初始化 汇编输出文件 以及 动态写入 内容
@@ -199,14 +202,16 @@ foreach ($CodeSectionArray as $sec => $body){
 	GenerateFunc::initStackPointer($sec);
 	
 	GenerateFunc::reset_ipsp_list_by_stack_pointer_define($soul_writein_Dlinked_List_Total[$sec]['list'],$StandardAsmResultArray[$sec]);
-		 
-	////////////////////////////////////////////////////////////////////////////////////////////////
-	// 顺序写入 双向链表 信息
+	// init DList
 	ConstructionDlinkedListOpt::init($soul_writein_Dlinked_List_Total[$sec],$rel_jmp_range[$sec],$rel_jmp_pointer[$sec]);
-	
 	// init Organs Arrays
 	OrgansOperator::init($sec);
-	//
+	//重定位信息	
+	if (isset($garble_rel_info[$sec])){
+		$c_rel_info = $garble_rel_info[$sec];
+	}else{
+		$c_rel_info = array();
+	}
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 根据 双向链表 信息 初始化 character.Rate
 	Character::flushUnits();
@@ -214,8 +219,8 @@ foreach ($CodeSectionArray as $sec => $body){
 		Character::initUnit($a,SOUL);
 	}
 	
-	$c_rel_jmp_switcher = $rel_jmp_switcher[$sec];
-
+	$c_rel_jmp_switcher = isset($rel_jmp_switcher[$sec])?$rel_jmp_switcher[$sec]:false;
+	
 	if (isset($c_user_cnf['output_opcode_max'])){ //设置了最大输出，则必须计算rel.jmp
 		$c_rel_jmp_switcher = true;
 		$tmp = ConstructionDlinkedListOpt::OplenInit($c_user_cnf['output_opcode_max'] - $body['SizeOfRawData']); //用户设置的最大体积 - 当前段已有字节 = 可用
@@ -227,13 +232,6 @@ foreach ($CodeSectionArray as $sec => $body){
 			continue;
 		}
 	}
-	//重定位信息	
-	if (isset($garble_rel_info[$sec])){
-		$c_rel_info = $garble_rel_info[$sec];
-	}else{
-		$c_rel_info = false;
-	}
-
 	////////////////////////////////////////////////////////////////////////////////////////////////	
 	// stack balance gen
 	StackBalance::start($stack_balance_array[$sec],$soul_effect_GPR[$sec],ConstructionDlinkedListOpt::getAllUnits(),Character::readRate());
@@ -243,11 +241,11 @@ foreach ($CodeSectionArray as $sec => $body){
 			// TODO: 应尝试恢复，目前简化处理，直接放弃!			
 			GeneralFunc::LogInsert("reset_rel_jmp_array() fail after StackBalance::start()",ERROR);
 		}
-	}	
+	}
 	
 	//测试soul_usable 项是否有问题,所有可写单位(寄存器,内存地址)和可读单位(内存地址)都写入操作代码，(注:flag目前不管)
 	//                             这样...当soul_usable有问题，我们就能通过运行结构文件发现了(除不会出错的那种问题...)
-	if (true === $c_user_cnf['gen4debug01']){
+	if ((isset($c_user_cnf['gen4debug01'])) and (true === $c_user_cnf['gen4debug01'])){
 		GeneralFunc::LogInsert("gen4debug01 option was effected on section: $sec , name: ".$body['name'],3); //debug 应用,提示之
 		DebugFunc::debug_usable_array(ConstructionDlinkedListOpt::readListFirstUnit());
 		if ($c_rel_jmp_switcher){ //识别是否超过定长跳转范围，如果超过...返回error
@@ -260,16 +258,9 @@ foreach ($CodeSectionArray as $sec => $body){
 		//exit;
 		
 	}else{
-		
-		////////////////////////////////////////////////////////////////////////////////////////////////
-		//生成 处理 poly,bone,meat执行顺序的数组
-		
+		// 生成 处理 poly,bone,meat执行顺序的数组		
 		$organ_process = OrgansOperator::GenOrganProcess(CfgParser::GetStrength($sec),count($soul_writein_Dlinked_List_Total[$sec]['list']),CfgParser::params('maxstrength'));
 		
-		//if (defined('DEBUG_ECHO')){
-		//	var_dump ($organ_process);
-		//}
-
 		if (0 == count($organ_process)){ //无任何处理
 			GeneralFunc::LogInsert($language['section_name'].$body['name'].$language['section_number']."$sec ".$language['section_without_garble'],2);			
 		}
@@ -321,7 +312,10 @@ foreach ($CodeSectionArray as $sec => $body){
 				OrganBone::start($objs);
 			}
 
-			$exetime_record['organ'][$c_process] += GeneralFunc::exetime_record($stime); //获取执行的时间
+			if (!isset($exetime_record['organ'][$c_process])){
+				$exetime_record['organ'][$c_process] = 0;
+			}
+			$exetime_record['organ'][$c_process] += GeneralFunc::exetime_record();
 			
 			//######				
 			if (true === $c_rel_jmp_switcher){	
@@ -348,8 +342,11 @@ foreach ($CodeSectionArray as $sec => $body){
 				  echo "<br><font color=red>roll back...</font><br>";					  	
 				  ConstructionDlinkedListOpt::rollback();
 				  Character::rollback();
-				}              
-				$exetime_record['adjust_rel_jmp'] += GeneralFunc::exetime_record($stime); //获取程序执行的时间				
+				}
+				if (!isset($exetime_record['adjust_rel_jmp'])){
+					$exetime_record['adjust_rel_jmp'] = 0;
+				}
+				$exetime_record['adjust_rel_jmp'] += GeneralFunc::exetime_record();				
 			
 				if (true === $break_now){ //oplen可用被突破,回滚后 放弃余下处理部分
 					break;
@@ -362,8 +359,10 @@ foreach ($CodeSectionArray as $sec => $body){
 			}
 		}	
 	}
-
-	//var_dump (ConstructionDlinkedListOpt::readRelJmpRange());		
+	
+	if (!empty($non_null_labels)){
+		GeneralFunc::LogInsert('not support non null labels(reloc) yet!',ERROR);
+	}
 
 	//生成 用于编译的 源文件
 	//对混淆后代码进行处理，让编译后进行定位处理
@@ -375,7 +374,10 @@ foreach ($CodeSectionArray as $sec => $body){
 		}		
 	}		
 
-	$exetime_record['gen_asm_file'] += GeneralFunc::exetime_record($stime); //获取程序执行的时间
+	if (!isset($exetime_record['gen_asm_file'])){
+		$exetime_record['gen_asm_file'] = 0;
+	}
+	$exetime_record['gen_asm_file'] += GeneralFunc::exetime_record();
 	
 	$mem_usage_record[$sec] = number_format(memory_get_usage());
 
@@ -390,7 +392,7 @@ if (!GeneralFunc::LogHasErr()){
 	
 	exec ("$nasm -f bin \"$out_file\" -o \"$binary_filename\" -Z \"$report_filename\" -Xvc");
 	
-	$exetime_record['nasm final obj'] = GeneralFunc::exetime_record($stime); //获取程序执行的时间
+	$exetime_record['nasm final obj'] = GeneralFunc::exetime_record();
 
 	if (file_exists($binary_filename)){
 		$newCodeSection = array(); //$newCodeSection[节表编号][addr] 
@@ -415,7 +417,7 @@ if (!GeneralFunc::LogHasErr()){
 	}else{ //编译失败，参见Log文件 $report_filename
 		GeneralFunc::LogInsert('compile fail, generate stopped.');
 	}
-	$exetime_record['others'] = GeneralFunc::exetime_record($stime); //获取程序执行的时间
+	$exetime_record['others'] = GeneralFunc::exetime_record(); //获取程序执行的时间
 }
 
 //输出$output[] 到日志文件,jason格式

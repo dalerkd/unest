@@ -84,15 +84,29 @@ class GeneralFunc{
 	}
 	// 根据usable前后stack确定指令的stack环境(可用or 不可用)
 	public static function soul_stack_set(&$code,$usable){
-		foreach ($code as $a => $b){
+		$tmp = $code;
+		foreach ($tmp as $a => $b){
 			if (is_array($b)){
-				if ((true !== $usable[$a][P][STACK]) or (true !== $usable[$a][N][STACK])){
-					$code[$a][STACK] = false;
-				}else{
-					$code[$a][STACK] = true;
-				}		
+				if (!isset($usable[$a][P])){
+					$usable[$a][P] = array();
+				}
+				if (!isset($usable[$a][N])){
+					$usable[$a][N] = array();
+				}
+				self::soul_stack_set_single($code[$a],$usable[$a][P],$usable[$a][N]);
 			}
 		}
+	}
+	public static function soul_stack_set_single(&$code,$usable_prev,$usable_next){
+		if ((!isset($usable_prev[STACK])) or (true !== $usable_prev[STACK])){
+			$code[STACK] = false;
+			return;
+		}
+		if ((!isset($usable_next[STACK])) or (true !== $usable_next[STACK])){
+			$code[STACK] = false;
+			return;
+		}
+		$code[STACK] = true;
 	}
 	// 获取文件行数(失败返回false,成功返回行数)
 	// TODO：超长汇编指令(换行) 未考虑
@@ -184,24 +198,24 @@ class GeneralFunc{
 			return true;
 		}
 
-		$opt = Instruction::getInstructionOpt($asm[OPERATION],count($asm[P_TYPE]));
+		$operand_num = 0;
+		if (isset($asm[P_TYPE])){
+			$operand_num = count($asm[P_TYPE]);
+		}
 
-	
-
-
-
+		$opt = Instruction::getInstructionOpt($asm[OPERATION],$operand_num);
 
 		if (isset($opt[STACK])){
 			return true;
 		}
 		
-		if (is_array($asm[PARAMS])){ //参数，寄存器SP 或 ESP ，读或写 操作	
+		if ((isset($asm[PARAMS])) and (is_array($asm[PARAMS]))){ //参数，寄存器SP 或 ESP ，读或写 操作	
 			foreach ($asm[PARAMS] as $a => $b){
 				if ('i' !== $asm[P_TYPE][$a]){
-					if ((0 === $rule) && ($opt[$a] <= 1)){
+					if ((0 === $rule) and (isset($opt[$a])) and ($opt[$a] <= 1)){
 						continue;
 					}
-					if ($opt[$a] < 1){ // lea
+					if ((isset($opt[$a])) and ($opt[$a] < 1)){ // lea
 						continue;
 					}
 					if ('r' === $asm[P_TYPE][$a]){
@@ -259,7 +273,7 @@ class GeneralFunc{
 			if (isset($unit[LABEL])){
 			    
 			}else{
-	            $ret = OrgansOperator::GetByDListUnit($unit,CODE);
+	            $ret = OrgansOperator::getCode($unit[C]);
 			}
 		}
 		return $ret;

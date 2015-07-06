@@ -138,7 +138,7 @@ class RelJmp{
 			}
 			
 			if ($label = ConstructionDlinkedListOpt::labelUnit($c_unit)){
-				if (is_array($in_cache_src[$label])){
+				if ((isset($in_cache_src[$label]))and(is_array($in_cache_src[$label]))){
 					foreach ($in_cache_src[$label] as $a => $b){
 						ConstructionDlinkedListOpt::setRelJmpRange($b,$a);//$rel_jmp_range[$a] = $b;
 						ConstructionDlinkedListOpt::setRelJmpRange(1 | 4,$a,'unit',$c_unit);//$rel_jmp_range[$a]['unit'][$c_unit] = 1 | 4;
@@ -187,6 +187,9 @@ class RelJmp{
 			$tmp = $in_cache_label;
 			foreach ($tmp as $label => $a){
 				if (!isset($in_cache_label[$label]['unit'][$c_unit])){
+					if (!isset($in_cache_label[$label]['range'])){
+						$in_cache_label[$label]['range'] = 0;
+					}
 					$in_cache_label[$label]['range'] += ConstructionDlinkedListOpt::lenUnit($c_unit);
 					$in_cache_label[$label]['unit'][$c_unit] = 1 | 2 | 4;
 				}
@@ -215,7 +218,9 @@ class RelJmp{
 					foreach ($v as $a => $b){
 						ConstructionDlinkedListOpt::setRelJmpRange($b,$a);//$rel_jmp_range[$a] = $b;
 						//$rel_jmp_range[$a]['range'] += $in_cache_label[$label]['range'];
-						ConstructionDlinkedListOpt::increaseRelJmpRange($a,$in_cache_label[$label]['range']);
+						if (isset($in_cache_label[$label]['range'])){
+							ConstructionDlinkedListOpt::increaseRelJmpRange($a,$in_cache_label[$label]['range']);
+						}
 						//range 超过 max 返回false
 						if (ConstructionDlinkedListOpt::outRelJmpRange($a)){
 							return false;

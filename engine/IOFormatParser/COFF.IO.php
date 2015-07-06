@@ -665,8 +665,8 @@ class IOFormatParser{
 		global $reloc_info_2_rewrite_table;
 		global $non_null_labels;
 		    
-			$obj_filename = CfgParser::params(obj_filename);
-
+			$obj_filename = CfgParser::params('obj_filename');
+			
 			//编译成功，开始解析
 			$binary_file_buf = file_get_contents($binary_filename);
 			self::get_contents_from_result_binary($binary_file_buf,$CodeSectionArray,$reloc_info_2_rewrite_table,$newCodeSection,$non_null_labels); 
@@ -762,15 +762,15 @@ class IOFormatParser{
 				$NumberOfRelocation = count($reloc_info_2_rewrite_table[$a]);
 				foreach ($reloc_info_2_rewrite_table[$a] as $c => $d){
 					$c_lp += 4 + 4 + 2;
-					if ($non_null_labels[$tmp[2]][$tmp[3]][$tmp[4]]){ //需要更新rel32标号位 数值
-						$rewrite_rel32[$rva] = $non_null_labels[$tmp[2]][$tmp[3]][$tmp[4]];
-					}
+					// if (isset($non_null_labels[$tmp[2]][$tmp[3]][$tmp[4]])){ //需要更新rel32标号位 数值
+					// 	$rewrite_rel32[$rva] = $non_null_labels[$tmp[2]][$tmp[3]][$tmp[4]];
+					// }
 				}
 			}
 			$newCodeSection[$a]['addr'] = $c_lp;
 			$newCodeSection[$a]['size'] = $size;
 			$newCodeSection[$a]['NumberOfRelocation']  = $NumberOfRelocation;
-			//如果有 跳转 标号 是非0 值，这里再赋值
+			//如果有 跳转 标号 是非 0 值，这里再赋值
 			foreach ($rewrite_rel32 as $z => $y){	
 				//为 $y 左侧 补足 0
 				$y = substr('00000000',0,8 - strlen($y)).$y;
@@ -792,10 +792,10 @@ class IOFormatParser{
 	//$bits  4(dword) or 2(word)
 	//
 	private static function hex_write(&$buf,$lp,$contents,$bits = 4){
-		if (!$isHex){
+		// if (!$isHex){
 			$tmp = '%0'.($bits*2).'x';
 			$y = sprintf($tmp,$contents);
-		}
+		// }
 		if ($bits == 4){
 			$buf[$lp + 3] = pack("H*",substr($y,0,2));
 			$buf[$lp + 2] = pack("H*",substr($y,2,2));

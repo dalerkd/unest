@@ -25,7 +25,7 @@ class Character{
         echo  '<tr><td>BONE</td>'; 
 		for ($i = 1;$i<10;$i++) {
 		    echo '<td>';
-			if (is_array(self::$_rate[BONE][$i])){
+			if ((isset(self::$_rate[BONE][$i]))and(is_array(self::$_rate[BONE][$i]))){
 				foreach (self::$_rate[BONE][$i] as $a){
 					if (!isset(self::$_rate[BONE][$i+1][$a])){
 						echo $a.'; ';
@@ -38,7 +38,7 @@ class Character{
         echo  '<tr bgcolor="#c0c0c0"><td>MEAT</td>';        
 		for ($i = 1;$i<10;$i++) {
 		    echo '<td>';
-			if (is_array(self::$_rate[MEAT][$i])){
+			if ((isset(self::$_rate[MEAT][$i]))and(is_array(self::$_rate[MEAT][$i]))){
 				foreach (self::$_rate[MEAT][$i] as $a){
 					if (!isset(self::$_rate[MEAT][$i+1][$a])){
 						echo $a.'; ';
@@ -51,7 +51,7 @@ class Character{
         echo  '<tr><td>POLY</td>';        
 		for ($i = 1;$i<10;$i++) {
 		    echo '<td>';
-			if (is_array(self::$_rate[POLY][$i])){
+			if ((isset(self::$_rate[POLY][$i]))and(is_array(self::$_rate[POLY][$i]))){
 				foreach (self::$_rate[POLY][$i] as $a){
 					if (!isset(self::$_rate[POLY][$i+1][$a])){
 						echo $a.'; ';

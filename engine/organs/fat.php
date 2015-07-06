@@ -40,7 +40,7 @@ class OrganFat{
 					$c_range = ConstructionDlinkedListOpt::readRelJmpRange($a,'range');
 					if (($c_range <= 127) and (($c_range + $fat_size) > 127)){
 					//if (($c_rel_jmp_range[$a]['max'] - $c_rel_jmp_range[$a]['range']) < $fat_size){ //有限 定长跳转 不够 写入脂肪，放弃...
-						echo "<br> give up fat overflow  $a :".$c_rel_jmp_range[$a]['range'].' + '.$fat_size.' changed the range bits!';
+						// echo "<br> give up fat overflow  $a :".$c_rel_jmp_range[$a]['range'].' + '.$fat_size.' changed the range bits!';
 						ConstructionDlinkedListOpt::OplenIncrease($fat_size,false);
 						return '';
 					}

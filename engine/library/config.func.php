@@ -370,9 +370,13 @@ class CfgParser{
 						foreach ($sec_name as $c_name => $v){
 							$i = $section_array[$c_name];
 							self::$_user_config[$c_name]            = $all_configure_array[$i]['unprotect'];
-							self::$_user_config[$c_name]['protect'] = $all_configure_array[$i]['protect'];
-							if (true === $all_configure_array[$i]['stack_usable']){
-								self::$_user_config[$c_name]['stack_usable'] = true;
+							if (isset($all_configure_array[$i]['protect'])){
+								self::$_user_config[$c_name]['protect'] = $all_configure_array[$i]['protect'];
+							}
+							if (isset($all_configure_array[$i]['stack_usable'])){
+								if (true === $all_configure_array[$i]['stack_usable']){
+									self::$_user_config[$c_name]['stack_usable'] = true;
+								}
 							}
 							foreach ($v as $sec_id){
 								self::$_user_cnf[$sec_id]              = $all_configure_array[$i];
@@ -585,23 +589,25 @@ class CfgParser{
 			foreach ($b as $c => $d){
 				$c_list = $soul_writein_Dlinked_List_Total[$d]['list'][DEFAULT_DLIST_FIRST_NUM];
 				while (true){				
-					$f = $c_list[C]; 
-					if (true === $c_define['protect']['thread_memory']){   //禁止所有内存地址 可写入 属性
-						if (is_array($soul_usable[$d][$f][P][MEM_OPT_ABLE])){
-							foreach ($soul_usable[$d][$f][P][MEM_OPT_ABLE] as $z => $y){
-								if (ValidMemAddr::is_writable($y)){
-									$tmp = ValidMemAddr::get($y);
-									$tmp[OPT] &= 1;									
-									$soul_usable[$d][$f][P][MEM_OPT_ABLE][$z] = ValidMemAddr::append($tmp);
+					$f = $c_list[C];
+					if (isset($c_define['protect']['thread_memory'])){
+						if (true === $c_define['protect']['thread_memory']){   //禁止所有内存地址 可写入 属性
+							if (is_array($soul_usable[$d][$f][P][MEM_OPT_ABLE])){
+								foreach ($soul_usable[$d][$f][P][MEM_OPT_ABLE] as $z => $y){
+									if (ValidMemAddr::is_writable($y)){
+										$tmp = ValidMemAddr::get($y);
+										$tmp[OPT] &= 1;									
+										$soul_usable[$d][$f][P][MEM_OPT_ABLE][$z] = ValidMemAddr::append($tmp);
+									}
 								}
 							}
-						}
-						if (is_array($soul_usable[$d][$f][N][MEM_OPT_ABLE])){
-							foreach ($soul_usable[$d][$f][N][MEM_OPT_ABLE] as $z => $y){
-								if (ValidMemAddr::is_writable($y)){
-									$tmp = ValidMemAddr::get($y);
-									$tmp[OPT] &= 1;
-									$soul_usable[$d][$f][N][MEM_OPT_ABLE][$z] = ValidMemAddr::append($tmp);
+							if (is_array($soul_usable[$d][$f][N][MEM_OPT_ABLE])){
+								foreach ($soul_usable[$d][$f][N][MEM_OPT_ABLE] as $z => $y){
+									if (ValidMemAddr::is_writable($y)){
+										$tmp = ValidMemAddr::get($y);
+										$tmp[OPT] &= 1;
+										$soul_usable[$d][$f][N][MEM_OPT_ABLE][$z] = ValidMemAddr::append($tmp);
+									}
 								}
 							}
 						}
@@ -632,13 +638,14 @@ class CfgParser{
 							}
 						}
 					}
-
-					if (true === $c_define['stack_usable']){   //设置所有栈有效 and 清除所有单位可用ESP,  见./readme/readme.config.txt
-						unset ($soul_usable[$d][$f][P][NORMAL_WRITE_ABLE]['ESP']);
-						unset ($soul_usable[$d][$f][N][NORMAL_WRITE_ABLE]['ESP']);
-						$soul_usable[$d][$f][P][STACK] = true;
-						$soul_usable[$d][$f][N][STACK] = true;
-						$StandardAsmResultArray[$d][$f][STACK] = true;
+					if (isset($c_define['stack_usable'])){
+						if (true === $c_define['stack_usable']){   //设置所有栈有效 and 清除所有单位可用ESP,  见./readme/readme.config.txt
+							unset ($soul_usable[$d][$f][P][NORMAL_WRITE_ABLE]['ESP']);
+							unset ($soul_usable[$d][$f][N][NORMAL_WRITE_ABLE]['ESP']);
+							$soul_usable[$d][$f][P][STACK] = true;
+							$soul_usable[$d][$f][N][STACK] = true;
+							$StandardAsmResultArray[$d][$f][STACK] = true;
+						}
 					}
 					///////////////////////////////////////////////////////
 					//
@@ -668,7 +675,7 @@ class CfgParser{
 
 	//显示用户设置
 	public static function show($sec_name){
-		echo "<br>============= 显示用户设置 ( ".self::$_user_params['base'].'/'.$_user_params['cnf']." ) ============= <br>";
+		echo "<br>============= 显示用户设置 ( ".self::$_user_params['base'].'/'.self::$_user_params['cnf']." ) ============= <br>";
 		foreach ($sec_name as $sec_name_show => $a){
 			$save = false;
 			$total_sec_num = array();

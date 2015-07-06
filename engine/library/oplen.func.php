@@ -58,11 +58,8 @@ class OpLen{
 		global $opcode_len_result;
 		
 
-		$opcode_len = 0;
-		if (isset($opt[PREFIX])){
-			$opcode_len = count($opt[PREFIX]);    
-		}
-		$p_number = count($opt[P_TYPE]);
+		$opcode_len = isset($opt[PREFIX])?count($opt[PREFIX]):0;
+		$p_number   = isset($opt[P_TYPE])?count($opt[P_TYPE]):0;
 
 		
 		if (Instruction::getMatchCC($opt[OPERATION])){ //XXXcc 条件指令
@@ -81,7 +78,7 @@ class OpLen{
 		}
 		$result = false; 
 		$oplen = 0;
-		if (!is_array($possible_arrays)){ //无匹配对象,指令?
+		if ((!isset($possible_arrays))or(!is_array($possible_arrays))){ //无匹配对象,指令?
 			echo "<br>no match OP: $p_number";
 			var_dump($opt);
 		}else{
