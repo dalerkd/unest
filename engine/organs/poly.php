@@ -30,14 +30,14 @@ class OrganPoly{
 	// 比较 2个内存地址是否相同，考虑重定位 副本的问题
 	// DWORD [DWORD FS:UNEST_RELINFO_104_71_2] === DWORD [DWORD FS:UNEST_RELINFO_104_71_0]
 	private static function is_same_mem($a,$b){
-		global $pattern_reloc_4_replace;
-
 						
 		if ($a === $b){
 			return true;
 		}
 		//考虑重定位
 		$replacement = UNIQUEHEAD.'RELINFO_'.'$2_$3';
+		$pattern_reloc_4_replace = '/('.UNIQUEHEAD.'RELINFO_(\d+)_(\d+)_(\d+))/';  //匹配 reloc 信息
+		
 		$a = preg_replace($pattern_reloc_4_replace,$replacement,$a); 
 		$b = preg_replace($pattern_reloc_4_replace,$replacement,$b); 
 
@@ -259,14 +259,17 @@ class OrganPoly{
 	}	
 	// 检查目标多态模板是否可用 (new_regs 与 soul_usable['next'] 比较)
 	// 随机部分 检查的同时 也 生成
-	private static function check_poly_usable ($c_usable,$org,&$usable_poly_model,&$rand_result){
+	private static function check_poly_usable ($uid,&$usable_poly_model,&$rand_result){
+
+		$org    = OrgansOperator::getCode($uid);
+		$c_usable = OrgansOperator::getUsable($uid);
 
 		$obj = $org[OPERATION];
 
 		$tmp = $usable_poly_model;
 		foreach ($tmp as $a => $b){
-			//检查new stack 是否冲突
-			if (true !== $org[STACK]){			
+			// 检查new stack 是否冲突
+			if (!OrgansOperator::isUsableStackbyUnit($uid)){
 				if ((isset(self::$_poly_model_repo[$obj][$b]['new_stack']))and(true === self::$_poly_model_repo[$obj][$b]['new_stack'])){
 					if (defined('DEBUG_ECHO') && defined ('POLY_DEBUG_ECHO')){
 						echo "<font color=red>stack conflict!";
@@ -411,280 +414,224 @@ class OrganPoly{
 	// 根据 多态模板 生成 多态代码
 	// 调用前已做过可用性检查，这里直接生成 返回
 	private static function generat_poly_code($org,$soul_usable,$poly_model,$rand_result,$int3 = false){
-		global $c_rel_info;
-
-
 		global $sec;
-			$ret = array();
+		$ret = array();
 
-			if (isset($poly_model[OOO])){ //乱序
-				$poly_model = self::ooo($poly_model);
+		if (isset($poly_model[OOO])){ //乱序
+			$poly_model = self::ooo($poly_model);
+		}
+	 
+		if ($int3){
+			$ret[CODE]['int3'][OPERATION] = 'int3';
+		}
+		if (isset($poly_model[FAT])){
+			$ret[FAT] = $poly_model[FAT];
+		}
+
+		$specific_usable = false;
+		if (isset($poly_model[SPECIFIC_USABLE])){
+			$specific_usable = $poly_model[SPECIFIC_USABLE];
+		}
+
+		//修正参数中 数据(固定跳转/原参数继承/...)
+		foreach ($poly_model[CODE] as $a => $b){//        foreach ($poly_model[OPERATION] as $a => $b){
+			if (isset($b[LABEL])){
+				$ret[CODE][$a][LABEL] = UNIQUEHEAD.$b[LABEL].self::$_index;
+				continue;
+			}	
+
+			$ret[CODE][$a][OPERATION] = $b[OPERATION];
+			if (!isset($b[PARAMS])){ //无参数
+					continue;
 			}
-		 
-			if ($int3){
-				$ret[CODE]['int3'][OPERATION] = 'int3';
-			}
-			if (isset($poly_model[FAT])){
-				$ret[FAT] = $poly_model[FAT];
-			}
-
-			$specific_usable = false;
-			if (isset($poly_model[SPECIFIC_USABLE])){
-				$specific_usable = $poly_model[SPECIFIC_USABLE];
-			}
-
-			//修正参数中 数据(固定跳转/原参数继承/...)
-			foreach ($poly_model[CODE] as $a => $b){//        foreach ($poly_model[OPERATION] as $a => $b){
-					if (isset($b[LABEL])){
-						$ret[CODE][$a][LABEL] = UNIQUEHEAD.$b[LABEL].self::$_index." : ";
-						continue;
-					}	
-
-					$ret[CODE][$a][OPERATION] = $b[OPERATION];
-					if (!isset($b[PARAMS])){ //无参数
-							continue;
-					}
-					$bb = $b[PARAMS];
-					foreach ($bb as $c => $d){
-							if ('SOLID_JMP_' === substr($d,0,10)){ //固定跳转标号
-									$tmp = explode ('_',$d);
-									$d = UNIQUEHEAD.$d.self::$_index;                                                  
-							}else{
-								//原参数的继承
-								if (preg_match_all('/(p_)([\d]{1,})/',$d,$mat)){
-									$mat = array_flip($mat[2]); 
-									foreach ($mat as $z => $y){  									
-										if (isset($org[REL][$z])){	
-											//if (('i' == $org[P_TYPE][$z])||('m' == $org[P_TYPE][$z])){//整数 或 内存 可能含有 重定位数据，
-																											//重定位数据多态时可能被多处引用，这里需要复制一个新标号
-											$new = GenerateFunc::reloc_inc_copy_naked($org[REL][$z]['i'],$org[REL][$z][C]);
-											//echo "<br> ".$org[REL][$z]['i'].': '.$org[REL][$z][C].' -> '.$new;
-											$c_rel_info[$org[REL][$z]['i']][$new] = $c_rel_info[$org[REL][$z]['i']][$org[REL][$z][C]];
-
-											//echo "<br>$sec: ".$org[REL]['i']."[$new] = ".$org[REL]['i'].'['.$org[REL][C].']';
-
-											if (isset($poly_model[REL_RESET][$z])){
-												foreach ($poly_model[REL_RESET][$z] as $zz => $yy){
-													$c_rel_info[$org[REL][$z]['i']][$new][$zz] = $yy;
-												}
-											}
-											//echo "<br>first:";
-											//var_dump ($org[PARAMS][$z]);
-											$c_org_params = 
-											str_replace(UNIQUEHEAD.'RELINFO_'.$sec.'_'.$org[REL][$z]['i'].'_'.$org[REL][$z][C],UNIQUEHEAD.'RELINFO_'.$sec.'_'.$org[REL][$z]['i'].'_'.$new,$org[PARAMS][$z]);
-											//echo "<br>last: $c ".$org[REL]['i'].' '.$new;
-											//var_dump ($c_org_params);
-											//$ret[CODE][$a][REL][N] = $c;
-											$ret[CODE][$a][REL][$c]['i'] = $org[REL][$z]['i'];
-											$ret[CODE][$a][REL][$c][C] = $new;	
-											$d = str_replace('p_'.$z,$c_org_params,$d);
-										}else{  //p_n的n一般不会超过3个(指令参数最多不过3个),所以不考虑p_10会被p_1错误替换的问题
-											$d = str_replace('p_'.$z,$org[PARAMS][$z],$d);
-										}
-										if (!isset($poly_model[P_TYPE][$a][$c])){ //模板中手工指定的优先
-											$poly_model[P_TYPE][$a][$c] = $org[P_TYPE][$z];
-										}
-										if (!isset($poly_model[P_BITS][$a][$c])){ //模板中手工指定的优先
-											$poly_model[P_BITS][$a][$c] = $org[P_BITS][$z];
-										}
+			$bb = $b[PARAMS];
+			foreach ($bb as $c => $d){
+					if ('SOLID_JMP_' === substr($d,0,10)){ //固定跳转标号
+							$tmp = explode ('_',$d);
+							$d = UNIQUEHEAD.$d.self::$_index;                                                  
+					}else{
+						//原参数的继承
+						if (preg_match_all('/(p_)([\d]{1,})/',$d,$mat)){
+							$mat = array_flip($mat[2]); 
+							foreach ($mat as $z => $y){
+								if (isset($org[REL][$z])){
+									$new = RelocInfo::cloneUnit($org[REL][$z]['i'],$org[REL][$z][C]);
+									if (isset($poly_model[REL_RESET][$z])){
+										RelocInfo::resetUnit($org[REL][$z]['i'],$new,$poly_model[REL_RESET][$z]);
 									}
+									$c_org_params = 
+									str_replace(UNIQUEHEAD.'RELINFO_'.$sec.'_'.$org[REL][$z]['i'].'_'.$org[REL][$z][C],UNIQUEHEAD.'RELINFO_'.$sec.'_'.$org[REL][$z]['i'].'_'.$new,$org[PARAMS][$z]);
+									$ret[CODE][$a][REL][$c]['i'] = $org[REL][$z]['i'];
+									$ret[CODE][$a][REL][$c][C]   = $new;	
+									$d = str_replace('p_'.$z,$c_org_params,$d);
+								}else{  //p_n的n一般不会超过3个(指令参数最多不过3个),所以不考虑p_10会被p_1错误替换的问题
+									$d = str_replace('p_'.$z,$org[PARAMS][$z],$d);
 								}
-								if (preg_match_all('/(r_)([\d]{1,})/',$d,$mat)){ //多态模板中的rand部分的替换
-									$mat = array_flip($mat[2]); 
-									foreach ($mat as $z => $y){             
-										if ('m' == $rand_result[P_TYPE][$z]){//随机 内存 可能含有 重定位数据，
-																			   //重定位数据多态时可能被多处引用，这里需要复制一个新标号
-											if (GenerateFunc::reloc_inc_copy($rand_result[$z],$old,$new)){
-
-												//var_dump ($rand_result);
-												//exit;
-												$rand_rel_inc[$z] = true;
-												$c_rel_info[$old[1]][$new] = $c_rel_info[$old[1]][$old[2]];
-												$rand_result[$z] = str_replace(UNIQUEHEAD.'RELINFO_'.$old[0].'_'.$old[1].'_'.$old[2],UNIQUEHEAD.'RELINFO_'.$old[0].'_'.$old[1].'_'.$new,$rand_result[$z]);
-												$ret[CODE][$a][REL][$c]['i'] = $old[1];
-												$ret[CODE][$a][REL][$c][C] = $new;
-											}
-										}
-										//p_n的n一般不会超过3个(指令参数最多不过3个),所以不考虑p_10会被p_1错误替换的问题
-										$d = str_replace('r_'.$z,$rand_result[$z],$d);
-									}
-									if (!isset($poly_model[P_TYPE][$a][$c])){ //模板中手工指定的优先
-										$poly_model[P_TYPE][$a][$c] = $rand_result[P_TYPE][$z];
-									}
-									if (!isset($poly_model[P_BITS][$a][$c])){ //模板中手工指定的优先
-										$poly_model[P_BITS][$a][$c] = $rand_result[P_BITS][$z];
-									}
+								if (!isset($poly_model[P_TYPE][$a][$c])){ //模板中手工指定的优先
+									$poly_model[P_TYPE][$a][$c] = $org[P_TYPE][$z];
 								}
+								if (!isset($poly_model[P_BITS][$a][$c])){ //模板中手工指定的优先
+									$poly_model[P_BITS][$a][$c] = $org[P_BITS][$z];
+								}
+							}
 						}
-						$ret[CODE][$a][PARAMS][$c] = $d;
-						$ret[CODE][$a][P_TYPE][$c] = $poly_model[P_TYPE][$a][$c];
-						$ret[CODE][$a][P_BITS][$c] = $poly_model[P_BITS][$a][$c];					
-					}
+						if (preg_match_all('/(r_)([\d]{1,})/',$d,$mat)){ //多态模板中的rand部分的替换
+							$mat = array_flip($mat[2]); 
+							foreach ($mat as $z => $y){             
+								if ('m' == $rand_result[P_TYPE][$z]){  // 随机 内存 可能含有 重定位数据，
+																	   // 重定位数据多态时可能被多处引用，这里需要复制一个新标号
+									if ($reloc_info = RelocInfo::transString2Array($rand_result[$z])){
+										$new = RelocInfo::cloneUnit($reloc_info['i'],$reloc_info[C]);
+										$rand_result[$z] = str_replace(UNIQUEHEAD.'RELINFO_'.$reloc_info['sec'].'_'.$reloc_info['i'].'_'.$reloc_info[C],UNIQUEHEAD.'RELINFO_'.$reloc_info['sec'].'_'.$reloc_info['i'].'_'.$new,$rand_result[$z]);
+										$ret[CODE][$a][REL][$c]['i'] = $reloc_info['i'];
+										$ret[CODE][$a][REL][$c][C] = $new;
+									}
+								}
+								//p_n的n一般不会超过3个(指令参数最多不过3个),所以不考虑p_10会被p_1错误替换的问题
+								$d = str_replace('r_'.$z,$rand_result[$z],$d);
+							}
+							if (!isset($poly_model[P_TYPE][$a][$c])){ //模板中手工指定的优先
+								$poly_model[P_TYPE][$a][$c] = $rand_result[P_TYPE][$z];
+							}
+							if (!isset($poly_model[P_BITS][$a][$c])){ //模板中手工指定的优先
+								$poly_model[P_BITS][$a][$c] = $rand_result[P_BITS][$z];
+							}
+						}
+				}
+				$ret[CODE][$a][PARAMS][$c] = $d;
+				$ret[CODE][$a][P_TYPE][$c] = $poly_model[P_TYPE][$a][$c];
+				$ret[CODE][$a][P_BITS][$c] = $poly_model[P_BITS][$a][$c];					
 			}
-			//修正 前后文 可用寄存器 及 内存地址
-			if (isset($soul_usable)){
-				$c_flag_forbid = isset($poly_model[FLAG_FORBID])?$poly_model[FLAG_FORBID]:NULL;
-				$c_p_forbid    = isset($poly_model[P_FORBID])?$poly_model[P_FORBID]:NULL;
-				$c_r_forbid    = isset($poly_model[R_FORBID])?$poly_model[R_FORBID]:NULL;
-				self::inherit_usable_to_poly($ret,$specific_usable,$soul_usable,$c_flag_forbid,$c_p_forbid,$c_r_forbid,$rand_result,$org);
-			}
+		}
+		//修正 前后文 可用寄存器 及 内存地址
+		if (isset($soul_usable)){
+			$c_flag_forbid = isset($poly_model[FLAG_FORBID])?$poly_model[FLAG_FORBID]:NULL;
+			$c_p_forbid    = isset($poly_model[P_FORBID])?$poly_model[P_FORBID]:NULL;
+			$c_r_forbid    = isset($poly_model[R_FORBID])?$poly_model[R_FORBID]:NULL;
+			self::inherit_usable_to_poly($ret,$specific_usable,$soul_usable,$c_flag_forbid,$c_p_forbid,$c_r_forbid,$rand_result,$org);
+		}
 		return $ret;
 	}
 	// 根据多态目标 返回 可用多态模板数组,无可用返回false 
 	// 此处不考虑usable限制，仅根据opt,para 获取所有可用tpl
-    public static function get_usable_models($obj){
-        global $pattern_reloc;
-		global $c_rel_info;
-
-	    $ret = false;
-	    $usable_poly_model = NULL;
-	    if (isset(self::$_poly_model_index[$obj[OPERATION]])){
-	    	$usable_poly_model = self::$_poly_model_index[$obj[OPERATION]];
-		}
-
-		if (is_array($usable_poly_model)){ //初步 检测是否有可用多态模板(指令名)
-			$p_num = 0;
-			if (isset($obj[P_TYPE])){
-				$p_num = count($obj[P_TYPE]);				
+    public static function get_usable_models($uid){
+		$ret = false;
+		$obj = OrgansOperator::getCode($uid);
+		$reloc_info = OrgansOperator::getRelocInfo($uid);
+		if ($obj){
+		    $usable_poly_model = NULL;
+		    if ((isset($obj[OPERATION]))and(isset(self::$_poly_model_index[$obj[OPERATION]]))){
+		    	$usable_poly_model = self::$_poly_model_index[$obj[OPERATION]];
 			}
-			if (isset($usable_poly_model[$p_num])){
-				$usable_poly_model = $usable_poly_model[$p_num];
-			}
-			if ($p_num){                    
-				foreach ($obj[P_TYPE] as $a => $b){
-					if ($b == 'r'){ //通用寄存器 可能有 直接按寄存器 进行的索引(优先于类型的索引)
-						if (isset($usable_poly_model[$obj[PARAMS][$a]])){
-							$usable_poly_model = $usable_poly_model[$obj[PARAMS][$a]];	
-							continue;
-						}
-						//r 区分出为堆栈指针的寄存器 's'
-						if (Instruction::getGeneralRegIndex($obj[PARAMS][$a]) == STACK_POINTER_REG){
-							$b = 's';
-						}
-					}
-					if ($b == 'i'){ //常数 有可能含有 重定位 & 常数忽略位数
-						if (preg_match($pattern_reloc,$obj[PARAMS][$a],$tmp)){
-							$tmp = explode ('_',$tmp[0]);
-							$tmp_rel = 'rel'.$c_rel_info[$tmp[3]][$tmp[4]]['Type'];
-							//含重定位的整数，可能有 直接按 重定位+Type 进行的索引(优先于'i'的索引)
-							if (isset($usable_poly_model[$tmp_rel])){
-								$usable_poly_model = $usable_poly_model[$tmp_rel];	
+			if (is_array($usable_poly_model)){ // 初步 检测是否有可用多态模板(指令名)
+				$p_num = 0;
+				if (isset($obj[P_TYPE])){
+					$p_num = count($obj[P_TYPE]);				
+				}
+				if (isset($usable_poly_model[$p_num])){
+					$usable_poly_model = $usable_poly_model[$p_num];
+				}
+				if ($p_num){                    
+					foreach ($obj[P_TYPE] as $a => $b){
+						if ($b == 'r'){ // 通用寄存器 可能有 直接按寄存器 进行的索引(优先于类型的索引)
+							if (isset($usable_poly_model[$obj[PARAMS][$a]])){
+								$usable_poly_model = $usable_poly_model[$obj[PARAMS][$a]];	
 								continue;
-							} 											
+							}
+							// r 区分出为堆栈指针的寄存器 's'
+							if (OrgansOperator::isSPregParam($uid,$a)){
+								$b = 's';
+							}							
 						}
-					}else{
-						$b .= $obj[P_BITS][$a]; //加上位数信息
-					}
-					if (isset($usable_poly_model[$b])){
-						$usable_poly_model = $usable_poly_model[$b];
-					}else{
-						$usable_poly_model = NULL;
-						break;
+						if ($b == 'i'){ //常数 有可能含有 重定位 & 常数忽略位数
+							if (isset($reloc_info[$a])){
+								if ($tmp_rel = RelocInfo::getType($reloc_info[$a]['i'],$reloc_info[$a][C])){
+									$tmp_rel = 'rel'.$tmp_rel;
+									if (isset($usable_poly_model[$tmp_rel])){
+										$usable_poly_model = $usable_poly_model[$tmp_rel];
+										continue;
+									} 	
+								}								
+							}							
+						}else{
+							$b .= $obj[P_BITS][$a]; //加上位数信息
+						}
+						if (isset($usable_poly_model[$b])){
+							$usable_poly_model = $usable_poly_model[$b];
+						}else{
+							$usable_poly_model = NULL;
+							break;
+						}
 					}
 				}
-			}
-			if (count($usable_poly_model)){											
-			    $ret = 	$usable_poly_model;
+				if (count($usable_poly_model)){											
+				    $ret = 	$usable_poly_model;
+				}
 			}
 		}
-
 		return $ret;
 	}
 	// 对指定指令进行多态处理
-	private static function collect_usable_poly_model($obj,$c_usable,&$ret){
-		
+	private static function collect_usable_poly_model($obj,&$ret){
+
 		$usable_poly_model = self::get_usable_models($obj);
+		
         if ($usable_poly_model){
 			$rand_result = array();
 			if (is_array($usable_poly_model)){
-				self::check_poly_usable ($c_usable,$obj,$usable_poly_model,$rand_result);
+				self::check_poly_usable($obj,$usable_poly_model,$rand_result);
 				//随机获得 多态模板
-				if (count($usable_poly_model)){
-					$x = GeneralFunc::my_array_rand($usable_poly_model);
+				if (!empty($usable_poly_model)){
+					$x = GeneralFunc::my_array_rand($usable_poly_model);					
 					$c_rand_result = isset($rand_result[$x])?$rand_result[$x]:NULL;
-					if (isset(self::$_poly_model_repo[$obj[OPERATION]][$usable_poly_model[$x]])){ //开始根据 多态模板 生成 多态 代码
+					$c_obj    = OrgansOperator::getCode($obj);
+					$c_usable = OrgansOperator::getUsable($obj);
+					if (isset(self::$_poly_model_repo[$c_obj[OPERATION]][$usable_poly_model[$x]])){ //开始根据 多态模板 生成 多态 代码
 						if ('int3' === $x){
-							$ret = self::generat_poly_code($obj,$c_usable,self::$_poly_model_repo[$obj[OPERATION]][$usable_poly_model[$x]],$c_rand_result,true);
+							$ret = self::generat_poly_code($c_obj,$c_usable,self::$_poly_model_repo[$c_obj[OPERATION]][$usable_poly_model[$x]],$c_rand_result,true);
 						}else{
-							$ret = self::generat_poly_code($obj,$c_usable,self::$_poly_model_repo[$obj[OPERATION]][$usable_poly_model[$x]],$c_rand_result);
+							$ret = self::generat_poly_code($c_obj,$c_usable,self::$_poly_model_repo[$c_obj[OPERATION]][$usable_poly_model[$x]],$c_rand_result);
 						}
-						//对多态结果进行stack可用状态设置(根据usable)
-						// GeneralFunc::soul_stack_set($ret[CODE],$ret[USABLE]);
 						return true;
 					}else{						
 						global $language;						
-						GeneralFunc::LogInsert($language['poly_repo_null'].$obj[OPERATION].'['.$x.']',2);
+						GeneralFunc::LogInsert($language['poly_repo_null'].$c_obj[OPERATION].'['.$x.']',2);
 					}
 				}
 			}
 		}
 		return false;
-	}	
-	// 把 多态 结果插入 代码 顺序 链表
-	private static function insert_into_list ($org,$organ_array){
-
-		$ret  = array();		
-		$prev = ConstructionDlinkedListOpt::prevUnit($org);
-		$comment = ConstructionDlinkedListOpt::getComment($org);
-		ConstructionDlinkedListOpt::remove_from_DlinkedList($org);
-		foreach ($organ_array as $organ_id){
-			$array = array();
-			$array[C] = $organ_id;
-			$array[COMMENT] = $comment.',p'.self::$_index;
-			if (isset($b[LABEL])){
-				$array[LABEL] = $b[LABEL];
-			}elseif (GenerateFunc::is_effect_ipsp($b,1)){
-				$array['ipsp'] = true;
-			}
-			$prev = ConstructionDlinkedListOpt::appendNewUnit($prev,$array);
-			$ret[] = $prev;
-		}
-		return $ret;
-	}	
+	}
 	// 多态 处理
-	public static function start ($objs){ 
-        
+	public static function start ($objs){
 		$obj = $objs[1];
 
-		$b = ConstructionDlinkedListOpt::getUnit($obj);
-		
-		$c_obj    = OrgansOperator::getCode($b[C]);
-		$c_usable = OrgansOperator::getUsable($b[C]);
-
 		$c_poly_result = array();		
-
-		if (self::collect_usable_poly_model($c_obj,$c_usable,$c_poly_result)){
-			// insert into Organ & DList Array
-			$organ_array = array();
+		if (self::collect_usable_poly_model($obj,$c_poly_result)){
+		// if (self::collect_usable_poly_model($c_obj,$c_usable,$c_poly_result)){
+			$insert_List_array = array();
+			$c_pos = $obj;
 			foreach ($c_poly_result[CODE] as $id => $value){
-				$c_usable = $c_fat = false;				
+				$c_usable = $c_fat = false;	
 				if (isset($c_poly_result[USABLE][$id])){
 					$c_usable = $c_poly_result[USABLE][$id];
 				}
 				if (isset($c_poly_result[FAT][$id])){
 					$c_fat = $c_poly_result[FAT][$id];
 				}
-				$organ_array[] = OrgansOperator::newUnit($value,$c_usable,$c_fat);
+				$c_pos = OrgansOperator::newUnitByManual($c_pos,$value,$c_usable,$c_fat);
+				OrgansOperator::appendComment($c_pos,'p'.self::$_index,$obj);
+				$insert_List_array[] = $c_pos;
 			}
-			$insert_List_array = array();
-			$comment  = ConstructionDlinkedListOpt::getComment($obj);
-			$comment .= ',p'.self::$_index;
-			$prev = ConstructionDlinkedListOpt::prevUnit($obj);
-			ConstructionDlinkedListOpt::remove_from_DlinkedList($obj);
-			foreach ($organ_array as $organ_id){
-				$array = OrgansOperator::getDListUnitArray($organ_id);
-				$array[COMMENT] = $comment;
-				$prev  = ConstructionDlinkedListOpt::appendNewUnit($prev,$array);
-				$insert_List_array[] = $prev;
-			}		
+			
 
             // 原单位Character.Rate清零 / 新单位init.character 初始化 & 继承原单位
 			$old = Character::getAllRate($obj);
-			Character::removeRate($obj);
-			// var_dump ($insert_List_array);
+			OrgansOperator::removeDLink($obj);
 			foreach ($insert_List_array as $i){
-				$new = Character::initUnit($i,POLY);
-				Character::mergeRate($i,$new,$old);
+				if ($new = Character::initUnit($i,POLY)){
+					Character::mergeRate($i,$new,$old);
+				}
 			}
 
 			self::$_index ++;

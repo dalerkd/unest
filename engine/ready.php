@@ -4,9 +4,8 @@ require dirname(__FILE__)."/include/common.inc.php";
 require dirname(__FILE__)."/library/ready.func.php";
 require dirname(__FILE__)."/library/general.func.php";
 require dirname(__FILE__)."/library/preprocess.func.php";
-require dirname(__FILE__)."/library/data.construction.php";
+require dirname(__FILE__)."/library/organ.func.php";
 require dirname(__FILE__)."/library/config.func.php";
-require dirname(__FILE__)."/library/rel.jmp.func.php";
 require dirname(__FILE__)."/library/instruction.func.php";
 require dirname(__FILE__)."/library/mem.func.php";
 require dirname(__FILE__)."/library/ready.stack.balance.func.php";
@@ -199,8 +198,8 @@ if (!GeneralFunc::LogHasErr()){
 	//
 	//为所有eip跳转指令(重定位的都设跳转目标为下一指令) 定位 以后添加 Label 的位置信息
 	//替换  eip跳转指令 后的常数为 Label
-	$solid_jmp_array = array();    //保存固定跳转 Dest / Source 的数组 $solid_jmp_array[sec][dest][n]           = Label Name
-	$solid_jmp_to    = array();    //保存固定跳转 来源 -> 目的         $solid_jmp_to   [sec][source] = dest
+	$solid_jmp_array = array();    //保存固定跳转 Dest / Source 的数组 $solid_jmp_array[sec][dest][n] = Label Name
+	$solid_jmp_to    = array();    //保存固定跳转 来源 -> 目的         $solid_jmp_to   [sec][source]  = dest
 
 	ReadyFunc::eip_label_replacer($AsmLastSec,$solid_jmp_array,$solid_jmp_to,$myTables,$AsmResultArray,$LineNum_Code2Reloc,$language);
 
@@ -220,7 +219,7 @@ if (!GeneralFunc::LogHasErr()){
     // 过滤 重定位 type = 20 必须为跳转标号 / type = 6 必须是值(非标号) | 否则丢弃此段，不做处理
 	$z = $myTables['CodeSectionArray'];
 	foreach ($z as $a => $b){
-		if (is_array($myTables['RelocArray'][$a])){
+		if (isset($myTables['RelocArray'][$a])){
 			foreach ($myTables['RelocArray'][$a] as $c => $d){
 				if (((20 === $d['Type']) and (isset($d['isLabel'])) and (true === $d['isLabel'])) or (( 6 === $d['Type']) and ((!isset($d['isLabel'])) or (!$d['isLabel'])))){
 				    $garble_rel_info[$a][$c][0] = $d;
@@ -268,18 +267,12 @@ if (!GeneralFunc::LogHasErr()){
 	$stack_broke               = array(); // //堆栈  ESP 被改变 (ESP作为参数 且 Opt > 1)     _|
 
 	ReadyFunc::standard_asm($myTables,$garble_rel_info,$AsmResultArray,$StandardAsmResultArray,$stack_used,$stack_broke,$language);
-	//var_dump ($stack_used);
-	//var_dump ($stack_broke);
-	//var_dump ($StandardAsmResultArray[44]);
-	//var_dump ($StandardAsmResultArray[2911]);
-	$exetime_record['disasm to standard'] = GeneralFunc::exetime_record(); //获取程序执行的时间
-	//
 
-	//
-	$exec_thread_list = array();        //逐个分析 节表中代码 所有可能 流程 [section][thread No][n]   => line_number
-										//                                                      [n+1] => ...
-										//
-										//
+	$exetime_record['disasm to standard'] = GeneralFunc::exetime_record(); //获取程序执行的时间
+
+	// 逐个分析 节表中代码 所有可能 流程 [section][thread No][n]   => line_number
+	$exec_thread_list = array();
+
 	ReadyFunc::exec_thread_list_get($myTables['CodeSectionArray'],$StandardAsmResultArray,$exec_thread_list,$solid_jmp_to,$AsmLastSec);
 
 	$exetime_record['exec thread list'] = GeneralFunc::exetime_record(); //获取程序执行的时间
@@ -319,18 +312,18 @@ if (!GeneralFunc::LogHasErr()){
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     //对 各节表 指令/Label 生成 代码顺序写入 双向链表
 	$soul_writein_Dlinked_List_Total = array();
-	$Dlink_Soul_Map = array(); // dlink id -> asm code line
+	$soul_len_array = array(); // record length of all instructions
 	foreach ($myTables['CodeSectionArray'] as $sec => $b){            
 	    $soul_writein_Dlinked_List = array();
 		$s_w_Dlinked_List_index = DEFAULT_DLIST_FIRST_NUM;
 		$prev = false;	
 		$c_solid_jmp_array = isset($solid_jmp_array[$sec])?$solid_jmp_array[$sec]:NULL;
-		OrgansOperator::init($sec);
+
 		$lp_asm_result = count($StandardAsmResultArray[$sec]) + 1;
 
 		$label_index = -1; //label 编号从 -1 起
     	foreach ($StandardAsmResultArray[$sec] as $z => $y){			
-		    ReadyFunc::generat_soul_writein_Dlinked_List($soul_writein_Dlinked_List,$z,$s_w_Dlinked_List_index,$prev,$c_solid_jmp_array);
+		    ReadyFunc::generat_soul_writein_Dlinked_List($soul_writein_Dlinked_List,$soul_len_array,$z,$s_w_Dlinked_List_index,$prev,$c_solid_jmp_array);
 		    unset ($c_solid_jmp_array[$z]);
 		}
 		if (!empty($c_solid_jmp_array)){//剩余的label 都放在末尾 (继承 上一指令的 next_usable)
@@ -341,20 +334,29 @@ if (!GeneralFunc::LogHasErr()){
 					break;
 				}
 				foreach ($y as $w){
-					ReadyFunc::add_soul_writein_Dlinked_List($soul_writein_Dlinked_List,$s_w_Dlinked_List_index,$prev,$w,$z,true);				
+					ReadyFunc::add_soul_writein_Dlinked_List($soul_writein_Dlinked_List,$soul_len_array,$s_w_Dlinked_List_index,$prev,$w,$z,true);
 				}
 			}		
-		}		
-		$soul_writein_Dlinked_List_Total[$sec]['index'] = $s_w_Dlinked_List_index;   //末尾 (新单位 可用编号)
-		$soul_writein_Dlinked_List_Total[$sec]['list']  = $soul_writein_Dlinked_List;
-		// 
-		foreach ($soul_writein_Dlinked_List as $Didx => $value){
-			$Dlink_Soul_Map[$sec][$value[C]] = $Didx;
 		}
+		$soul_writein_Dlinked_List_Total[$sec] = $soul_writein_Dlinked_List;
 	}
 }    
+// 所有元素key与Dlinked_List' key 统一
+// var_dump ($valid_mem_opt_array);
+if (!ReadyFunc::unified_by_DList_key()){
+	GeneralFunc::LogInsert('fail to call ReadyFunc::unified_by_DList_key()',ERROR);
+}
+// var_dump ($valid_mem_opt_array);
+// echo '<br>HIRO:';
+// var_dump ($normal_register_opt_array);
+// var_dump ($soul_writein_Dlinked_List_Total);
+// var_dump ($soul_len_array[6]);
+// var_dump ($StandardAsmResultArray[6]);
+// var_dump ($soul_forbid[6]); 
+// var_dump ($soul_usable[6]); 
+// exit;
 
-//根据 dynamic insert 记录 替换 $StandardAsmResultArray 中对应 整数参数
+// 根据 dynamic insert 记录 替换 $StandardAsmResultArray 中对应 整数参数
 $dynamic_insert_result = array();
 if (!GeneralFunc::LogHasErr()){
 	$dynamic_insert_result = PreprocessFunc::dynamic_insert_dealer($dynamic_insert_array,$StandardAsmResultArray);
@@ -371,9 +373,9 @@ if (!GeneralFunc::LogHasErr()){
 	//所有堆栈有效单位，禁止对堆栈指针的可写定义
 	foreach ($sec_name as $a => $b){	    
 	    foreach ($b as $c => $sec_id){
-			$c_list = $soul_writein_Dlinked_List_Total[$sec_id]['list'][DEFAULT_DLIST_FIRST_NUM];
-			while (true){					  
-                $f = $c_list[C];				    
+	    	$f = DEFAULT_DLIST_FIRST_NUM;
+			$c_list = $soul_writein_Dlinked_List_Total[$sec_id][$f];
+			while (true){                
 				if (isset($soul_usable[$sec_id][$f][P][STACK])){ //堆栈有效
 				    unset($soul_usable[$sec_id][$f][P][NORMAL_WRITE_ABLE][STACK_POINTER_REG]);
                     $soul_forbid[$sec_id][$f][P][NORMAL][STACK_POINTER_REG][32] = true;
@@ -383,7 +385,8 @@ if (!GeneralFunc::LogHasErr()){
                     $soul_forbid[$sec_id][$f][N][NORMAL][STACK_POINTER_REG][32] = true;
 				}
 				if (false !== $c_list[N]){
-					$c_list = $soul_writein_Dlinked_List_Total[$sec_id]['list'][$c_list[N]];
+					$f = $c_list[N];
+					$c_list = $soul_writein_Dlinked_List_Total[$sec_id][$f];
 				}else{
 					break;
 				}
@@ -397,166 +400,115 @@ if (!GeneralFunc::LogHasErr()){
 	//取得所有单位 mem 参数 对opcode 长度的影响		
 	require dirname(__FILE__)."/library/oplen.func.php";
 	
-	foreach ($soul_writein_Dlinked_List_Total as $number => $z){			
-		foreach ($soul_writein_Dlinked_List_Total[$number]['list'] as $a => $b){
-			if (isset($b[LABEL])){
+	foreach ($soul_writein_Dlinked_List_Total as $sec => $z){			
+		foreach ($z as $a => $b){
+			if (isset($StandardAsmResultArray[$sec][$a][LABEL])){
 			
 			}else{
-				if (isset($StandardAsmResultArray[$number][$b[C]][P_TYPE])){
-					foreach ($StandardAsmResultArray[$number][$b[C]][P_TYPE] as $c => $d){
+				if (isset($StandardAsmResultArray[$sec][$a][P_TYPE])){
+					foreach ($StandardAsmResultArray[$sec][$a][P_TYPE] as $c => $d){
 						if ('m' === $d){
-							$c_len = OpLen::code_len($StandardAsmResultArray[$number][$b[C]],true);
-							if ($c_len <= $b['len']){
-								$all_valid_mem_opcode_len[$StandardAsmResultArray[$number][$b[C]][PARAMS][$c]] = $b['len'] - $c_len;
-							}	
+							$c_len = OpLen::code_len($StandardAsmResultArray[$sec][$a],true);
+							if ($c_len <= $soul_len_array[$sec][$a]){
+								$all_valid_mem_opcode_len[$StandardAsmResultArray[$sec][$a][PARAMS][$c]] = $soul_len_array[$sec][$a] - $c_len;
+							}
 						}
 					}
 				}
-			}
-			// echo "<br>##########################  $number ######################";  
+			}			
 		}
-		echo "<br>##########################  $number ######################";
+		echo "<br>##########################  $sec ######################";
 		echo '<br>$all_valid_mem_opcode_len:';
 		var_dump ($all_valid_mem_opcode_len);
-			//exit;
+		//exit;
 	}
-			 
+		 
 	$exetime_record['init mem_addition'] = GeneralFunc::exetime_record(); //获取程序执行的时间   
-	
-    //////////////////////////////////////////////////////////////////////////////////////////////////////
-	//为链表补充'rel_jmp'数组
-	foreach ($soul_writein_Dlinked_List_Total as $sec => $a){
-		$soul_writein_Dlinked_List = $soul_writein_Dlinked_List_Total[$sec]['list'];
-		OrgansOperator::init($sec);
-		ConstructionDlinkedListOpt::init($a,array(),array());
-		foreach ($soul_writein_Dlinked_List as $a => $b){
-			$tmp = RelJmp::get_addition_List_info($a,false,true);
-			if (isset($tmp['rel_jmp'])){
-				$soul_writein_Dlinked_List_Total[$sec]['list'][$a]['rel_jmp'] = $tmp['rel_jmp'];
-			}
-		}
-	}
-    //////////////////////////////////////////////////////////////////////////////////////////////////////
-	//完成构造 定长跳转 的数据结构
-	$rel_jmp_range    = array();
-    $rel_jmp_pointer  = array();
-	$rel_jmp_switcher = array(); //段中有 rel.jmp['max']单位，generat处理时需要rel.jmp
-	$c_usable_oplen   = false;   //ready阶段不计代码可用长度
-	foreach ($soul_writein_Dlinked_List_Total as $sec => $a){
-		$soul_writein_Dlinked_List = $soul_writein_Dlinked_List_Total[$sec]['list'];
-		ConstructionDlinkedListOpt::init($a,array(),array());
-		ConstructionDlinkedListOpt::ReadyInit();
-		if (!RelJmp::reset_rel_jmp_array()){ //rel.jmp 返回错误				
-		    GeneralFunc::LogInsert($language['init_rel_jmp_fail']);  
-		}else{
-			$rel_jmp_pointer[$sec] = ConstructionDlinkedListOpt::ReadRelJmpPointer();
-			$rel_jmp_range[$sec]   = ConstructionDlinkedListOpt::readRelJmpRange();
-			if (is_array($rel_jmp_range[$sec])){
-				foreach ($rel_jmp_range[$sec] as $z => $y){
-					if (false !== $y['max']){
-						$rel_jmp_switcher[$sec] = true;
-						break;
-					}
-				}
-			}
-		}
-	}
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	//测试 opcode len 计算
-	if (false === true){
-	    require dirname(__FILE__)."/library/oplen.func.php";
-        
-		foreach ($soul_writein_Dlinked_List_Total as $number => $b){
-            echo "<br>##########################  $number ######################";  			
-			foreach ($soul_writein_Dlinked_List_Total[$number]['list'] as $a => $b){
-				if (isset($b[LABEL])){
-				
-				
-				}else{
-					$c_len = OpLen::code_len($StandardAsmResultArray[$number][$b[C]]);
-					//if ($b['len'] !== $c_len){
-						echo "<br>";
-						var_dump($StandardAsmResultArray[$number][$b[C]]);
-						echo "<br>len = ".$b['len'];
-						echo " = $c_len";
-					//}
-				}
-			}
-		}
-		exit;
-	}
-	
-    // 对隔断代码(如 call ,ret 等)的后方保护，再处理 根据:(如果后面还有单位，则复制后单位的前保护；如果后面没有单位，则去掉所有soul_usable ,soul_forbid)
-	ReadyFunc::redeal_split_opt($StandardAsmResultArray,$exec_thread_list,$soul_forbid,$soul_usable);
-	
-	// 为灵魂赋予stack是否可用标识
-	// 灵魂前后都stack可用，则灵魂可用，否则则不可用
-    foreach ($StandardAsmResultArray as $a => $b){
-		GeneralFunc::soul_stack_set($StandardAsmResultArray[$a],$soul_usable[$a]);
-	}
-
-	// 根据执行流程 获取 堆栈平衡块
-	foreach ($exec_thread_list as $sec => $exec_thread){
-		$stack_balance_array[$sec] = StackBalance::start ($solid_jmp_to[$sec],$StandardAsmResultArray[$sec],$exec_thread,$soul_writein_Dlinked_List_Total[$sec]['list']);			
-	}
-
-	if (!GeneralFunc::LogHasErr()){
-		// unset all empty unit
-		$soul_forbid = GeneralFunc::multi_array_filter($soul_forbid);
-		//////////////////////////////////////////////////////////////////////////////////////////////////////
-		//初始化完成，将数据保存入文档，供给下一步骤使用 
-		$rdy_output['StandardAsmResultArray']          = $StandardAsmResultArray;
-		$rdy_output['garble_rel_info']                 = $garble_rel_info;
-	  //$rdy_output['solid_jmp_array']                 = $solid_jmp_array;
-		$rdy_output['UniqueHead']                      = UNIQUEHEAD;
-		$rdy_output['CodeSectionArray']                = $myTables['CodeSectionArray'];
-
-		$rdy_output['preprocess_sec_name']             = $preprocess_sec_name;
-		
-		$rdy_output['soul_usable']                     = $soul_usable;
-		$rdy_output['soul_forbid']                     = $soul_forbid;
-		$rdy_output['valid_mem_index']                 = $all_valid_mem_opt_index;
-		$rdy_output['valid_mem_len']                   = $all_valid_mem_opcode_len;
-		$rdy_output['valid_mem_index_ptr']             = count($all_valid_mem_opt_index);
-		$rdy_output['sec_name']                        = $sec_name;
-		$rdy_output['soul_writein_Dlinked_List_Total'] = $soul_writein_Dlinked_List_Total;
-	  	//$rdy_output['AffiliateUsableArray']            = $AffiliateUsableArray;
-		$rdy_output['output_type']                     = CfgParser::params('type'); //binary or coff 
-		$rdy_output['engin_version']                   = ENGIN_VER;
-		$rdy_output['preprocess_config']               = CfgParser::get_preprocess_config();
-		$rdy_output['dynamic_insert']                  = $dynamic_insert_result;
-		
-		$rdy_output['rel_jmp_range']    = $rel_jmp_range;
-		$rdy_output['rel_jmp_pointer']  = $rel_jmp_pointer;
-		$rdy_output['rel_jmp_switcher'] = $rel_jmp_switcher;
-
-		$rdy_output['stack_balance_array'] = $stack_balance_array;
-
-		// translate $normal_register_opt_array's line to dlist id		
-		$soul_effect_GPR = array();
-		foreach ($Dlink_Soul_Map as $sec => $a){
-			foreach ($a as $b => $c){
-				$soul_effect_GPR[$sec][$c] = false;
-			}
-		}
-		foreach ($normal_register_opt_array as $sec => $a){
-			foreach ($a as $line => $b){
-				if (isset($Dlink_Soul_Map[$sec][$line])){
-					$soul_effect_GPR[$sec][$Dlink_Soul_Map[$sec][$line]] = $b;
-				}
-			}
-		}
-		$rdy_output['soul_effect_GPR']         = $soul_effect_GPR;
-
-		file_put_contents($rdy_file,serialize($rdy_output)); 			
-	}
-
-	if (defined('DEBUG_ECHO')){
-		ValidMemAddr::init($all_valid_mem_opt_index,count($all_valid_mem_opt_index));
-		DebugShowFunc::my_shower_01($myTables['CodeSectionArray'],$StandardAsmResultArray,$exec_thread_list);
-	}	
 }
 
+if (!GeneralFunc::LogHasErr()){
+	// 对隔断代码(如 call ,ret 等)的后方保护，再处理 根据:(如果后面还有单位，则复制后单位的前保护；如果后面没有单位，则去掉所有soul_usable ,soul_forbid)
+	ReadyFunc::redeal_split_opt($StandardAsmResultArray,$exec_thread_list,$soul_forbid,$soul_usable);	
+	// 根据执行流程 获取 堆栈平衡块
+	foreach ($exec_thread_list as $sec => $exec_thread){
+		$c_solid_jmp_array = NULL;
+		if (isset($solid_jmp_to[$sec])){
+			$c_solid_jmp_array = $solid_jmp_to[$sec];
+		}
+		$stack_balance_array[$sec] = StackBalance::start ($c_solid_jmp_array,$StandardAsmResultArray[$sec],$exec_thread,$soul_writein_Dlinked_List_Total[$sec]);
+	}
+}
+
+if (!GeneralFunc::LogHasErr()){
+	ValidMemAddr::init($all_valid_mem_opt_index,count($all_valid_mem_opt_index));
+	$organs = array();
+	// init whole units array
+	foreach ($soul_writein_Dlinked_List_Total as $sec => $c_dlist){		
+		OrgansOperator::init($sec,$c_dlist,$StandardAsmResultArray[$sec],$soul_usable[$sec],$soul_forbid[$sec],$soul_len_array[$sec],$normal_register_opt_array[$sec]);
+		if (!OrgansOperator::initRelJmp()){
+			GeneralFunc::LogInsert("initRelJmp() return fail! sec: $sec",ERROR);
+		}		
+		$organs[$sec] = OrgansOperator::export();
+		if (defined('DEBUG_ECHO')){			
+			DebugShowFunc::my_shower_01($sec,$exec_thread_list[$sec]);			
+			OrgansOperator::show();
+		}
+	}
+}
+	
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	//测试 opcode len 计算
+	// if (false === true){
+	//     require dirname(__FILE__)."/library/oplen.func.php";
+        
+	// 	foreach ($soul_writein_Dlinked_List_Total as $sec => $z){
+ //            echo "<br>##########################  $sec ######################";  			
+	// 		foreach ($z as $a => $b){
+	// 			if (isset($StandardAsmResultArray[$sec][$a][LABEL])){
+				
+				
+	// 			}else{
+	// 				$c_len = OpLen::code_len($StandardAsmResultArray[$sec][$a]);
+	// 				//if ($b['len'] !== $c_len){
+	// 					echo "<br>";
+	// 					var_dump($StandardAsmResultArray[$sec][$a]);
+	// 					echo "<br>len = ".$b['len'];
+	// 					echo " = $c_len";
+	// 				//}
+	// 			}
+	// 		}
+	// 	}
+	// 	exit;
+	// }
+
+if (!GeneralFunc::LogHasErr()){
+	// unset all empty unit
+	// $soul_forbid = GeneralFunc::multi_array_filter($soul_forbid);
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	//初始化完成，将数据保存入文档，供给下一步骤使用 
+	$rdy_output['garble_rel_info']                 = $garble_rel_info;
+  
+    $rdy_output['UniqueHead']                      = UNIQUEHEAD;
+	$rdy_output['CodeSectionArray']                = $myTables['CodeSectionArray'];
+
+	$rdy_output['preprocess_sec_name']             = $preprocess_sec_name;
+	
+	$rdy_output['valid_mem_index']                 = $all_valid_mem_opt_index;
+	$rdy_output['valid_mem_len']                   = $all_valid_mem_opcode_len;
+	$rdy_output['valid_mem_index_ptr']             = count($all_valid_mem_opt_index);
+	$rdy_output['sec_name']                        = $sec_name;
+	
+	$rdy_output['output_type']                     = CfgParser::params('type'); //binary or coff 
+	$rdy_output['engin_version']                   = ENGIN_VER;
+	$rdy_output['preprocess_config']               = CfgParser::get_preprocess_config();
+	$rdy_output['dynamic_insert']                  = $dynamic_insert_result;
+
+	$rdy_output['organs'] = $organs;
+
+	$rdy_output['stack_balance_array'] = $stack_balance_array;
+
+	file_put_contents($rdy_file,serialize($rdy_output)); 			
+}
 echo "<br><br><br><br>";
 echo "binary size: ";
 var_dump ($asm_size);

@@ -1,9 +1,12 @@
 <?php
 
-ini_set('display_errors',0);
-error_reporting(E_ERROR);
+// ini_set('display_errors',0);
+// error_reporting(E_ERROR);
 
 require dirname(__FILE__)."/language.inc.php";
+
+// rel_jmp range 极限保留字节数 (小于此数,所有单位character.Rate清除)
+define ('MIN_REL_JMP_RANGE_RESERVE',5);
 
 // 用户可设置变量部分
 $user_option['del_last_nop'] = true; //自动去掉节表末尾用来对齐的 nop 以及 0xcch
@@ -21,7 +24,7 @@ define ('ARG_MAX',5000);
 define ('UNEST.ORG', TRUE);
 ////////////////////////////////////////////
 // ready -> generate 中间文件版本号,避免ready生成的rdy文件被不匹配的generat处理
-define ('ENGIN_VER',7);                  
+define ('ENGIN_VER',8);                  
 //////////////////////////////////////////
 // organs Templates Version
 define('BONE_TPL_VER',1);
@@ -107,7 +110,5 @@ define ('NEW_REGS',       33);
 define ('SPECIFIC_USABLE',34);
 define ('FLAG_FORBID',    35);
 define ('REL_RESET',      36);
-
-define ('COMMENT',37);
 
 ?>

@@ -7,7 +7,6 @@ if(!defined('UNEST.ORG')) {
 class OrganMeat{
 	// meat 唯一编号,全目标 唯一
     private static $_index = 1;
-    private static $_c_meats;
 
 	private static $_meat_inst;
 
@@ -103,28 +102,7 @@ class OrganMeat{
 		}elseif ($tpl_index < MEAT_TPL_PER_TASK){
 			GeneralFunc::LogInsert($tpl_index.' meat tpl has been loaded less than want: '.MEAT_TPL_PER_TASK,NOTICE);
 		}
-	}
-	// 把已生成的血肉 插入 链表
-	private static function insert_into_list($current_forward,$direct = P){
-		$prev = false;
-		if (P === $direct){
-			$prev = ConstructionDlinkedListOpt::prevUnit($current_forward);		
-		}else{
-			$prev = $current_forward;
-		}
-		foreach (self::$_c_meats as $c_meat){
-			$array = array(
-				C       => $c_meat,
-				COMMENT => ',m'.self::$_index,
-			);
-			if (GenerateFunc::is_effect_ipsp(OrgansOperator::getCode($c_meat),0)){
-				$array['ipsp'] = true;
-			}
-			$prev = ConstructionDlinkedListOpt::appendNewUnit($prev,$array);
-			// init character for new unit
-			Character::initUnit($prev,MEAT);
-		}
-	}		
+	}	
 	// 根据目标指令获取meat获取点
 	private static function get_split_point($opt){
 		$ret = false;
@@ -716,7 +694,6 @@ class OrganMeat{
 	}
 	// 生成有效内存地址
 	private static function genValidMemAddr($effects,$access,$bit,$usable,&$P_M_REG,&$REL){
-		global $c_rel_info;
 		$mem_array = array();
 		if ((isset($usable[MEM_OPT_ABLE])) and (is_array($usable[MEM_OPT_ABLE]))){
 			foreach ($usable[MEM_OPT_ABLE] as $i){
@@ -760,12 +737,9 @@ class OrganMeat{
 				}
 				// 内存地址 含 重定位信息
 				if (isset($mem[REL])){
-					if (GenerateFunc::reloc_inc_copy($mem[CODE],$old,$new)){
-						$mem[CODE] = str_replace(UNIQUEHEAD.'RELINFO_'.$old[0].'_'.$old[1].'_'.$old[2],UNIQUEHEAD.'RELINFO_'.$old[0].'_'.$old[1].'_'.$new,$mem[CODE]);					
-						ValidMemAddr::set($mIdx,$mem);
-						$REL['i'] = $old[1];
-						$REL[C] = $new;
-						$c_rel_info[$old[1]][$new] = $c_rel_info[$old[1]][$old[2]];						
+					if ($c_rel = RelocInfo::transString2Array($mem[CODE])){
+						$REL['i'] = $c_rel['i'];
+						$REL[C]   = $c_rel[C];
 					}
 				}
 				return $mem[CODE];
@@ -856,14 +830,16 @@ class OrganMeat{
 		return true;
 	}	
 	// 完成meat 单位的最终构建(参数,usable)
-	private static function genMeats($objs,$usable){
+	private static function genMeats($pos,$objs,$usable){
 		$c_usable[P] = $usable;
 		$c_usable[N] = $usable;
 		foreach ($objs as $c_obj){
-			if (0 === self::$_meat_units_status[$c_obj]){			
+			if (0 === self::$_meat_units_status[$c_obj]){
 				if (false !== self::genInstruction($c_obj,$usable)){
-					// insert into organs
-					self::$_c_meats[] = OrgansOperator::newUnit(self::$_meat_units[$c_obj],$c_usable);
+					// insert into organs					
+					$pos = OrgansOperator::newUnitByManual($pos,self::$_meat_units[$c_obj],$c_usable,NULL);					
+					OrgansOperator::appendComment($pos,'m'.self::$_index);
+					Character::initUnit($pos,MEAT);
 				}else{ // gen Inst fail
 					self::$_meat_units_status[$c_obj] = 8;
 				}
@@ -906,12 +882,9 @@ class OrganMeat{
         self::$_index ++;
 
 		$obj = $objs[1];
-		$b = ConstructionDlinkedListOpt::getUnit($obj);
-		$c_unit   = $b[C];
 
-		$c_obj    = OrgansOperator::getCode($b[C]);
-		$c_usable = OrgansOperator::getUsable($b[C]);
-		$c_fat    = OrgansOperator::getFat($b[C]);
+		$c_obj    = OrgansOperator::getCode($obj);
+		$c_usable = OrgansOperator::getUsable($obj);	
 
 		if (isset($c_obj[OPERATION])){
 
@@ -928,21 +901,22 @@ class OrganMeat{
 			$rate = Character::getAllRate($obj);
 			$meat_strength = ($rate[MEAT] > 1)?$rate[MEAT]:1;
 			$split_size  = rand (1,$meat_strength * MEAT_MAX_SINGLE_UNIT);
-			if (!$c_fat){
-				$front_meat_num  = rand (0,$split_size);			
-			}elseif (1 == $c_fat){
+			if (OrgansOperator::CheckFatAble($obj,P)){
 				$front_meat_num  = 0;
-			}else{
+			}elseif (OrgansOperator::CheckFatAble($obj,N)){
 				$front_meat_num  = $split_size;
+			}else{
+				$front_meat_num  = mt_rand (0,$split_size);
 			}
-			$behind_meat_num = $split_size - $front_meat_num;
+			$behind_meat_num = $split_size - $front_meat_num;			
 			// echo
 			if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
-				self::meat_shower_01($obj,$c_obj,$c_usable,$c_fat,$split_point,$split_size,$meat_strength,$front_meat_num,$behind_meat_num);
+				self::meat_shower_01($obj,$c_usable,$split_point,$split_size,$meat_strength,$front_meat_num,$behind_meat_num);
 				self::meat_shower_04();
 				echo '<br>Max count reg number in Mem: <b>'.self::$_max_mem_reg_number.'</b><br>';
 				self::meat_shower_05();
 			}
+			
 			// 分配meat.units
 			$tmp  = self::collectMeatUnits($front_meat_num,$split_point,-1,$c_usable[P]);
 	        $tmp  = array_reverse($tmp,true);
@@ -957,7 +931,7 @@ class OrganMeat{
 			if (isset(self::$_INST[self::$_C_ARRAY_ID][$split_point]['PARAMS'])){
 				foreach (self::$_INST[self::$_C_ARRAY_ID][$split_point]['PARAMS'] as $a => $b){
 					$r = array();
-					if (isset($c_obj[P_TYPE])){
+					if (isset($c_obj[P_TYPE][$a])){
 						if ('m' === $c_obj[P_TYPE][$a]){
 							if (isset($c_obj[P_M_REG][$a])){
 							    $r = array_keys($c_obj[P_M_REG][$a]);
@@ -1011,18 +985,12 @@ class OrganMeat{
 	        self::reg_allot();
 
 	        // 生成 最终指令 and insert into Organ/DList Array
-			self::$_c_meats = array();
-	        self::genMeats($front_index ,$c_usable[P]);
-	        if (!empty(self::$_c_meats)){
-	            self::insert_into_list($obj,P);
-	        }
+			$pos = OrgansOperator::prev($obj);
+	        self::genMeats($pos,$front_index ,$c_usable[P]);
+        
+	        self::genMeats($obj,$behind_index,$c_usable[N]);
+	       
 
-	        self::$_c_meats = array();
-	        self::genMeats($behind_index,$c_usable[N]);
-	        if (!empty(self::$_c_meats)){
-	        	self::insert_into_list($obj,N);
-	        }
-		
 	        if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
 	        	self::meat_shower_08();
 				self::meat_shower_02($front_index,$split_point,$c_obj,$behind_index);
@@ -1250,17 +1218,21 @@ class OrganMeat{
 		}
 		echo '</table>';	
 	}
-	private static function meat_shower_01($obj,$c_obj,$c_usable,$c_fat,$split_point,$split_size,$meat_strength,$front_meat_num,$behind_meat_num){
-		echo '<table border = 1><tr><td>meat obj ID</td><td>meat obj</td><td>usable</td><td>Fat?</td><td>split_point</td><td>split_obj</td><td>split_inst</td><td>split_size/meat_strength * MEAT_MAX_SINGLE_UNIT (front,behind)</td><tr>';
+	private static function meat_shower_01($obj,$c_usable,$split_point,$split_size,$meat_strength,$front_meat_num,$behind_meat_num){
+		echo '<table border = 1><tr><td>meat obj ID</td><td>Prev usable</td><td>Next usable</td><td>Fat?</td><td>split_point</td><td>split_obj</td><td>split_inst</td><td>split_size/meat_strength * MEAT_MAX_SINGLE_UNIT (front,behind)</td><tr>';
 		echo '<tr><td>';
 		echo "$obj";
 		echo '</td><td>';
-		var_dump ($c_obj);
+		var_dump ($c_usable[P]);		
 		echo '</td><td>';
-		var_dump ($c_usable[P]);
 		var_dump ($c_usable[N]);
-		echo '</td><td>';			
-		var_dump ($c_fat);
+		echo '</td><td>';
+		if (OrgansOperator::CheckFatAble($obj,P)){
+			echo ' Prev ';
+		}
+		if (OrgansOperator::CheckFatAble($obj,N)){
+		    echo ' Next ';
+		}
 		echo '</td><td>';
 		var_dump ($split_point);
 		echo '</td><td>';

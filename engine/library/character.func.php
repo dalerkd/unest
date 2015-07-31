@@ -99,26 +99,27 @@ class Character{
 	// $DListID:  链表编号
 	// $att    ： 属性来源(soul | meat | poly | bone)
 	// 返回    :  Rate
-	public static function initUnit($DListID,$att=SOUL){
+	public static function initUnit($id,$att=SOUL){
         
 		$ret = false;
 
 		//仅作为单位初始化使用，已存在单位直接返回
-		if (!isset(self::$_done_idx[$DListID])){
+		if (!isset(self::$_done_idx[$id])){
 
-			self::$_done_idx[$DListID] = true;
+			self::$_done_idx[$id] = true;
 			
 			// init value
 			$ret[BONE] = self::$_tpl[CTPL_INI][$att][BONE];
 			$ret[MEAT] = self::$_tpl[CTPL_INI][$att][MEAT];
 			$ret[POLY] = self::$_tpl[CTPL_INI][$att][POLY];
 
-			$obj = GeneralFunc::getCode_from_DlinkedList($DListID);
-			if (false === OrganPoly::get_usable_models($obj)){
+			if (false === OrganPoly::get_usable_models($id)){
 			    $ret[POLY] = 0;
 			}
+			
+			$obj = OrgansOperator::getCode($id);
 
-			if (isset(self::$_tpl[CTPL_OPT][$obj[OPERATION]])){
+			if ((isset($obj[OPERATION]))and(isset(self::$_tpl[CTPL_OPT][$obj[OPERATION]]))){
 				foreach (self::$_tpl[CTPL_OPT][$obj[OPERATION]] as $k => $v){
 					if ($ret[$k] > 0){
 						$ret[$k] += $v;
@@ -126,9 +127,9 @@ class Character{
 				}
 			}		
 			
-            self::setRate(POLY,$DListID,$ret[POLY]);
-            self::setRate(BONE,$DListID,$ret[BONE]);
-            self::setRate(MEAT,$DListID,$ret[MEAT]);
+            self::setRate(POLY,$id,$ret[POLY]);
+            self::setRate(BONE,$id,$ret[BONE]);
+            self::setRate(MEAT,$id,$ret[MEAT]);
 		}
 		return $ret;
 	}

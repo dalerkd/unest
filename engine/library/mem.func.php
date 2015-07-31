@@ -42,5 +42,10 @@ class ValidMemAddr{
 		}
 		return false;
 	}
+	// show
+	public static function show(){
+		var_dump (self::$_index);
+		var_dump (self::$_valid_mem_addr);
+	}
 }
 ?>

@@ -32,23 +32,24 @@ class OpLen{
 	//
 	//注:所有['range']未知的rel.jmp，返回可能的最大长度(非false)
 	//
-	public static function code_len($opt,$ignore_m = false){
-
-	
+	public static function code_len($opt,$ignore_m = false,$range=false){
+		if (isset($opt[LABEL])){
+			return 0;
+		}	
 		
 		if (('CALL' === $opt[OPERATION]) and ('i' === $opt[P_TYPE][0])){
 			return 5;
 		}
 
 		if (('JMP' === $opt[OPERATION]) and ('i' === $opt[P_TYPE][0])){
-			if ((isset($opt['range'])) and ($opt['range'] <= 127)){
+			if (($range) and ($range <= 127)){
 				return 2;
 			}
 			return 5;		
 		}
 	     
 		if ($a = Instruction::getJmpRangeLmt($opt[OPERATION])){
-			if (($opt['range'] > $a) and (isset($opt['range']))){
+			if (($range)and($range > $a)){
 				return false;
 			}
 			return 2;
@@ -64,7 +65,7 @@ class OpLen{
 		
 		if (Instruction::getMatchCC($opt[OPERATION])){ //XXXcc 条件指令
 			if (Instruction::isMatchCC('Jcc',$opt[OPERATION])){ //简化计算，按最大
-				if ((isset($opt['range'])) and ($opt['range'] <= 127)){
+				if (($range) and ($range <= 127)){
 					return 2;
 				}
 				return 6;

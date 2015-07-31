@@ -6,8 +6,6 @@ if(!defined('UNEST.ORG')) {
 
 class StackBalance{
 	private static $_obj_pool;
-	// [dlist id][reg][bits] = write | read
-	private static $_GPR_effects;
 	// $table_1 = array(); // [dlist_id][dir]  = universe_id
 	private static $_table_1;
 	// $table_2 = array(); // [universe_id][0] = dlist_id
@@ -58,9 +56,9 @@ class StackBalance{
 		self::$_work_ignore_forbid = false;
 	}
 	// 	生成可用目标池
-	private static function genpool($units,$charates){
-		// var_dump ($units);
-		// var_dump ($charates);
+	private static function genpool(){
+		$units = OrgansOperator::getAllUnits();
+		$charates = Character::readRate();
 		self::$_obj_pool = $units;
 		foreach ($charates as $a){
 			foreach ($a as $b){
@@ -71,22 +69,22 @@ class StackBalance{
 		}
 	}
 	// 生成由于stack禁用而不能作为插入点的 universe units
-	private static function genIllUnit($units){
-		foreach ($units as $a){
-			$b = ConstructionDlinkedListOpt::getUnit($a);
-			$c = OrgansOperator::getUsable($b[C]);
-			if (!isset($c[P][STACK]) or (true !== $c[P][STACK])){
-				if (isset(self::$_table_1[$a][P])){
-					$i = self::$_table_1[$a][P];
+	private static function genIllUnit(){
+		$c = OrgansOperator::getBeginUnit();
+		while ($c){
+			if (!OrgansOperator::isUsableStack($c,P)){
+				if (isset(self::$_table_1[$c][P])){
+					$i = self::$_table_1[$c][P];
 					self::$_ill_unit[$i] = $i;
 				}
 			}
-			if (!isset($c[N][STACK]) or (true !== $c[N][STACK])){
-				if (isset(self::$_table_1[$a][N])){
-					$i = self::$_table_1[$a][N];
+			if (!OrgansOperator::isUsableStack($c,N)){
+				if (isset(self::$_table_1[$c][N])){
+					$i = self::$_table_1[$c][N];
 					self::$_ill_unit[$i] = $i;
 				}
 			}
+			$c = OrgansOperator::next($c);
 		}
 	}
 	// 获取目标单位，返回stero.graphic 的 mono id & unit id
@@ -174,7 +172,7 @@ class StackBalance{
 					$valid = true;
 					// 影响其它mono id: readme.stack.balance.txt [step.4.0]
 					if (1 < count($c_effects_mono)){
-						echo '<br><font color =red><b>multi mono effects:</b>';
+						// echo '<br><font color =red><b>multi mono effects:</b>';
 						foreach ($c_effects_mono as $multi_mono){
 							if ($multi_mono !== $mono){
 								// echo "<br>mono id: $multi_mono";
@@ -208,7 +206,7 @@ class StackBalance{
 								}
 							}
 						}
-						echo '</font><br>';
+						// echo '</font><br>';
 					}
 					if ($break){
 						break;
@@ -232,7 +230,7 @@ class StackBalance{
 			// var_dump ($validUnits);
 			return self::insertPosition($o,$direction);
 		}else{
-			echo '<font color =red><br> no any unit is valid!</font>';
+			// echo '<font color =red><br> no any unit is valid!</font>';
 		}
 		return false;
 	}
@@ -549,21 +547,7 @@ class StackBalance{
 			$right[$value['r'][0]] = $value['r'][1];
 		}
 		return array($left,$right);
-	}
-	// Inheritance usable (type  0:push 1:pop)
-	private static function inheritanceUsable($unit,$type,$dst){
-		$tmp = ConstructionDlinkedListOpt::getUnit($unit);
-		if ($tmp){
-			$source_usable = OrgansOperator::getUsable($tmp[C]);
-			if (isset($tmp[C])){
-				if ($type){ // pop
-					OrgansOperator::cloneUsables($tmp[C],N,$dst);
-				}else{				
-					OrgansOperator::cloneUsables($tmp[C],P,$dst);
-				}
-			}
-		}
-	}
+	}	
 	// insert new unit to DList
 	private static function insertDList($result_array,$reg,$loop_num){
 		$ret = array();
@@ -573,27 +557,20 @@ class StackBalance{
 			P_TYPE => array('r'),
 			P_BITS => array(OPT_BITS),
 			PARAMS => array($reg),
-			STACK  => true,
 		);			
 
 		foreach ($result_array[0] as $uid => $isInclude){
 			$cid = self::$_table_2[$uid][0];
 			if ($isInclude){
-				$cid = ConstructionDlinkedListOpt::prevUnit($cid);
-			}			
-			$new_idx = OrgansOperator::newUnit($push);
-			$next_unit = ConstructionDlinkedListOpt::nextUnit($cid);
-			self::inheritanceUsable($next_unit,0,$new_idx);			
+				$cid = OrgansOperator::prev($cid);
+			}
+			$next_unit = OrgansOperator::next($cid);			
+			$new_idx = OrgansOperator::newUnitByCloneAttr($cid,$push,$next_unit,P);
+			OrgansOperator::appendComment($new_idx,'sb>'.$loop_num);
 			OrgansOperator::addUsableReg($new_idx,N,$reg,self::$_work_ignore_forbid);
-			$dlink_unit = array(
-				'ipsp'  => true,
-				C => $new_idx,
-				COMMENT => ',sb>'.$loop_num,
-			);
-			$j = ConstructionDlinkedListOpt::appendNewUnit($cid,$dlink_unit);
-			self::$_GPR_effects[$j][$reg][OPT_BITS] = R;
-			self::$_GPR_effects[$j][STACK_POINTER_REG][OPT_BITS] = W;
-			$ret[$uid] = $j;
+			OrgansOperator::setGPReffects($new_idx,$reg,OPT_BITS,R);
+			OrgansOperator::setGPReffects($new_idx,STACK_POINTER_REG,OPT_BITS,W);
+			$ret[$uid] = $new_idx;
 		}
 		
 		$pop = array(
@@ -601,25 +578,21 @@ class StackBalance{
 			P_TYPE => array('r'),
 			P_BITS => array(OPT_BITS),
 			PARAMS => array($reg),
-			STACK  => true,
 		);
 		foreach ($result_array[1] as $uid => $isInclude){
 			$cid = self::$_table_2[$uid][0];
 			if (!$isInclude){
-				$cid = ConstructionDlinkedListOpt::prevUnit($cid);
+				$cid = OrgansOperator::prev($cid);
 			}
-			$new_idx = OrgansOperator::newUnit($pop);
-			self::inheritanceUsable($cid,1,$new_idx);
-			OrgansOperator::addUsableReg($new_idx,P,$reg,self::$_work_ignore_forbid);
-			$dlink_unit = array(
-				'ipsp'  => true,
-				C => $new_idx,
-				COMMENT => ',sb<'.$loop_num,
-			);
-			$j = ConstructionDlinkedListOpt::appendNewUnit($cid,$dlink_unit);
-			self::$_GPR_effects[$j][$reg][OPT_BITS] = W;
-			self::$_GPR_effects[$j][STACK_POINTER_REG][OPT_BITS] = W;
-			$ret[$uid] = $j;
+			if (!($new_idx = OrgansOperator::newUnitByCloneAttr($cid,$pop,$cid,N))){
+				GeneralFunc::LogInsert("OrgansOperator::newUnitByCloneAttr() return false!",ERROR);
+			}else{
+				OrgansOperator::appendComment($new_idx,'sb<'.$loop_num);
+				OrgansOperator::addUsableReg($new_idx,P,$reg,self::$_work_ignore_forbid);
+				OrgansOperator::setGPReffects($new_idx,$reg,OPT_BITS,W);
+				OrgansOperator::setGPReffects($new_idx,STACK_POINTER_REG,OPT_BITS,W);
+				$ret[$uid] = $new_idx;
+			}
 		}
 		return $ret;
 	}
@@ -633,17 +606,13 @@ class StackBalance{
 		}		
 		$effects_units = array_keys($effects_units);
 		foreach ($effects_units as $unit){
-			if (!isset(self::$_GPR_effects[$unit])){
-			// TODO: 代码尚未探测对通用寄存器的影响 (应不存在此情况)
-				GeneralFunc::LogInsert("StackBalance::collectUsableRegister() found no GPR effects record!",ERROR);
-			}else{				
-				if (isset(self::$_GPR_effects[$unit][$reg])){
-					foreach (self::$_GPR_effects[$unit][$reg] as $c){					
-						if ($c & R){
-							return false;
-						}
-					}					
-				}
+			$c_GPR_effects = OrgansOperator::getGPReffects($unit);
+			if (isset($c_GPR_effects[$reg])){
+				foreach ($c_GPR_effects[$reg] as $c){					
+					if ($c & R){
+						return false;
+					}
+				}					
 			}
 		}
 		return true;
@@ -659,18 +628,14 @@ class StackBalance{
 		}
 		$effects_units = array_keys($effects_units);
 		$blocks = array(); // write operation regiser -> block it!
-		foreach ($effects_units as $units){
-			if (!isset(self::$_GPR_effects[$units])){
-				// TODO: 代码尚未探测对通用寄存器的影响 (应不存在此情况)
-				GeneralFunc::LogInsert("StackBalance::collectUsableRegister() found no GPR effects record!",ERROR);
-			}else{				
-				if (!empty(self::$_GPR_effects[$units])){
-					foreach (self::$_GPR_effects[$units] as $cGPR => $a){
-						foreach ($a as $b => $c){
-							if ($c & W){
-								$blocks[$cGPR] = true;
-								break;
-							}
+		foreach ($effects_units as $unit){
+			$c_GPR_effects = OrgansOperator::getGPReffects($unit);				
+			if (!empty($c_GPR_effects)){
+				foreach ($c_GPR_effects as $cGPR => $a){
+					foreach ($a as $b => $c){
+						if ($c & W){
+							$blocks[$cGPR] = true;
+							break;
 						}
 					}
 				}
@@ -683,10 +648,7 @@ class StackBalance{
     // add the usable reg to all effects units
 	private static function addEffectsReg($effects,$reg){
 		foreach ($effects as $a){
-			$DList_unit = ConstructionDlinkedListOpt::getUnit(self::$_table_2[$a][0]);
-			if (isset($DList_unit[C])){
-				OrgansOperator::addUsableReg($DList_unit[C],self::$_table_2[$a][1],$reg,self::$_work_ignore_forbid);
-			}
+			OrgansOperator::addUsableReg(self::$_table_2[$a][0],self::$_table_2[$a][1],$reg,self::$_work_ignore_forbid);			
 		}
 	}
 	// add new units to _table_1 and _table_2
@@ -701,15 +663,14 @@ class StackBalance{
 		}
 	}
 	// start ...
-	public static function start($stackBalanceArray,$GPReffects,$units,$charates){
+	public static function start($stackBalanceArray){
 		SteroGraphic::unserialize($stackBalanceArray['universe']);
-		SteroGraphic::show();
-		self::init();
-		self::$_GPR_effects = $GPReffects;		
+		// SteroGraphic::show();
+		self::init();	
 		self::import($stackBalanceArray);
-		self::genpool($units,$charates);
-		self::genIllUnit($units);
-		for ($i = 10;$i>0;$i--){
+		self::genpool();
+		self::genIllUnit();
+		for ($i = 20;$i>0;$i--){ // loop number = try times 
 			self::initwork();
 			if (self::genPair()){
 				$result_array = self::genInsertDirection();
@@ -725,14 +686,14 @@ class StackBalance{
 				if (false === $usableRegister){
 					continue;
 				}
-				echo "<br><br>usableRegister: $usableRegister";
+				// echo "<br><br>usableRegister: $usableRegister";
 				// 3.insert stero space and change effects' dims
 				$inserted_universe_units = SteroGraphic::insert_balance_pair($result_array,$effects,self::GAP_BITS);
 				if (false === $inserted_universe_units){
 					GeneralFunc::LogInsert("SteroGraphic::insert_balance_pair() return false!",WARNING);
 					continue;
 				}
-				SteroGraphic::show();
+				// SteroGraphic::show();
 				// 识别是否可忽略当前范围内register forbid(s)
 				self::$_work_ignore_forbid = self::isNotReadRegister($effects,$usableRegister);
 				// 4.insert DList

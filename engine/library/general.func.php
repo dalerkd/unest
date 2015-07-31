@@ -20,6 +20,7 @@ function shutdown_except(){
 	var_dump ($exetime_record);
 	echo "<br>memory_get_usage: ";
     var_dump (memory_get_usage());
+    // OrgansOperator::show();
 }
 // ***
 // 通用 函数 集
@@ -81,33 +82,7 @@ class GeneralFunc{
 		self::$_stime = microtime(true); //获取程序开始执行的时间
 		return $total;
 		/**************************************/
-	}
-	// 根据usable前后stack确定指令的stack环境(可用or 不可用)
-	public static function soul_stack_set(&$code,$usable){
-		$tmp = $code;
-		foreach ($tmp as $a => $b){
-			if (is_array($b)){
-				if (!isset($usable[$a][P])){
-					$usable[$a][P] = array();
-				}
-				if (!isset($usable[$a][N])){
-					$usable[$a][N] = array();
-				}
-				self::soul_stack_set_single($code[$a],$usable[$a][P],$usable[$a][N]);
-			}
-		}
-	}
-	public static function soul_stack_set_single(&$code,$usable_prev,$usable_next){
-		if ((!isset($usable_prev[STACK])) or (true !== $usable_prev[STACK])){
-			$code[STACK] = false;
-			return;
-		}
-		if ((!isset($usable_next[STACK])) or (true !== $usable_next[STACK])){
-			$code[STACK] = false;
-			return;
-		}
-		$code[STACK] = true;
-	}
+	}	
 	// 获取文件行数(失败返回false,成功返回行数)
 	// TODO：超长汇编指令(换行) 未考虑
 	public static function get_file_line($filename){
@@ -187,52 +162,52 @@ class GeneralFunc{
 	}
 	
 	// 识别 目标指令是否需要ipsp保护
-	public static function is_effect_ipsp($asm,$rule = 1,$sp_define = false){
+	// public static function is_effect_ipsp($asm,$rule = 1,$sp_define = false){
 
 
 
 	
 
 		
-		if (Instruction::isJmp($asm[OPERATION])){ //绝对 或 相对 跳转
-			return true;
-		}
+	// 	if (Instruction::isJmp($asm[OPERATION])){ //绝对 或 相对 跳转
+	// 		return true;
+	// 	}
 
-		$operand_num = 0;
-		if (isset($asm[P_TYPE])){
-			$operand_num = count($asm[P_TYPE]);
-		}
+	// 	$operand_num = 0;
+	// 	if (isset($asm[P_TYPE])){
+	// 		$operand_num = count($asm[P_TYPE]);
+	// 	}
 
-		$opt = Instruction::getInstructionOpt($asm[OPERATION],$operand_num);
+	// 	$opt = Instruction::getInstructionOpt($asm[OPERATION],$operand_num);
 
-		if (isset($opt[STACK])){
-			return true;
-		}
+	// 	if (isset($opt[STACK])){
+	// 		return true;
+	// 	}
 		
-		if ((isset($asm[PARAMS])) and (is_array($asm[PARAMS]))){ //参数，寄存器SP 或 ESP ，读或写 操作	
-			foreach ($asm[PARAMS] as $a => $b){
-				if ('i' !== $asm[P_TYPE][$a]){
-					if ((0 === $rule) and (isset($opt[$a])) and ($opt[$a] <= 1)){
-						continue;
-					}
-					if ((isset($opt[$a])) and ($opt[$a] < 1)){ // lea
-						continue;
-					}
-					if ('r' === $asm[P_TYPE][$a]){
-						if (Instruction::getGeneralRegIndex($b) == STACK_POINTER_REG){
-							return true;
-						}
-					}
-					if ((false !== $sp_define)&&('m' === $asm[P_TYPE][$a])){
-						if (preg_match('/'."$sp_define".'/',$b)){						
-							return true;
-						}
-					}
-				}
-			}
-		}
-		return false;
-	}
+	// 	if ((isset($asm[PARAMS])) and (is_array($asm[PARAMS]))){ //参数，寄存器SP 或 ESP ，读或写 操作	
+	// 		foreach ($asm[PARAMS] as $a => $b){
+	// 			if ('i' !== $asm[P_TYPE][$a]){
+	// 				if ((0 === $rule) and (isset($opt[$a])) and ($opt[$a] <= 1)){
+	// 					continue;
+	// 				}
+	// 				if ((isset($opt[$a])) and ($opt[$a] < 1)){ // lea
+	// 					continue;
+	// 				}
+	// 				if ('r' === $asm[P_TYPE][$a]){
+	// 					if (Instruction::getGeneralRegIndex($b) == STACK_POINTER_REG){
+	// 						return true;
+	// 					}
+	// 				}
+	// 				if ((false !== $sp_define)&&('m' === $asm[P_TYPE][$a])){
+	// 					if (preg_match('/'."$sp_define".'/',$b)){						
+	// 						return true;
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	return false;
+	// }
 	// 确定 POST or Get 传递进来的动态插入数据
 	public static function get_dynamic_insert_value (&$dynamic_insert){
 
@@ -267,16 +242,8 @@ class GeneralFunc{
 		//exit;
 	}
 	// 获取 链表单位编号 获取 CODE 数组
-	public static function getCode_from_DlinkedList($ListID){
-		$ret  = false;
-		if ($unit = ConstructionDlinkedListOpt::getUnit($ListID)){
-			if (isset($unit[LABEL])){
-			    
-			}else{
-	            $ret = OrgansOperator::getCode($unit[C]);
-			}
-		}
-		return $ret;
-	} 	
+	// public static function getCode_from_DlinkedList($ListID){	
+	//     //HIRO return OrgansOperator::getCode($ListID);
+	// } 	
 
 }

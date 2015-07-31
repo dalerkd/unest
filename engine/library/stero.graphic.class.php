@@ -236,9 +236,9 @@ class SteroGraphic{
 	// ripperpoint scanner
 	private static function ripper_scanner($wormholes){
 		$ret = array();
-		$keep_dim = false;//array();
+		$keep_dim = array();
 		foreach ($wormholes as $a => $b){
-			if (false === $keep_dim){
+			if (!isset($keep_dim[$b[0]])){
 				$keep_dim[$b[0]] = $b[1];
 			}else{
 				if ($b[1] != $keep_dim[$b[0]]){ // ripperpoint!
@@ -446,13 +446,15 @@ class SteroGraphic{
 					if (!empty($c_redup)){
 						foreach ($c_redup as $a){
 							$c_included_array[$mono_id][$a] = true;
-							if (true === $c_included_array[$a][$mono_id]){
-								if ($a > $mono_id){
-									$should_be_erased[] = $a;
-								}else{
-									$should_be_erased[] = $mono_id;
-								}
+							if (isset($c_included_array[$a][$mono_id])){
+								if (true === $c_included_array[$a][$mono_id]){
+									if ($a > $mono_id){
+										$should_be_erased[] = $a;
+									}else{
+										$should_be_erased[] = $mono_id;
+									}
 
+								}
 							}
 						}
 					}
@@ -552,8 +554,6 @@ class SteroGraphic{
 		if (count($wormholes) > 1){ // perhapes has ripper point 			
 			$ripperpoint = self::ripper_scanner($wormholes);
 			if (!empty($ripperpoint)){ // has ripper points !
-				// echo '<br>$ripperpoint:';
-				// var_dump ($ripperpoint);
 				foreach ($ripperpoint as $ripper_point => $true){
 					self::stero_ripper($ripper_point);   // ripper the steros
 				}

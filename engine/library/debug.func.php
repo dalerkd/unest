@@ -8,12 +8,11 @@ class DebugFunc{
 
 	//////////////////////////////////////////////////////
 	//
-	//生成 血肉
-	//$usable : 可用范围
-	//$prev   : 上一个链表 index，无则为false;
-	//$next   : 下一个链表 index，无则为false;
-	//$type   : 调试用 ... 特殊标记 产生特殊血肉
-	private static function gen_code_4_debug_usable_array($usable,$prev,$next,$type = '0x0cccccccc'){
+	// 生成 血肉
+	// $usable : 可用范围
+	// $prev   : 上一个链表 index，无则为false;
+	// $type   : 调试用 ... 特殊标记 产生特殊血肉
+	private static function gen_code_4_debug_usable_array($usable,$prev,$type = '0x0cccccccc'){
 		
 		$result = false;
 		$i = 0;    
@@ -58,7 +57,7 @@ class DebugFunc{
 		//}
 
 		
-		if (is_array($usable[MEM_OPT_ABLE])){
+		if (isset($usable[MEM_OPT_ABLE])){
 			foreach ($usable[MEM_OPT_ABLE] as $a => $b){
 				$v = ValidMemAddr::get($b);
 				$z = $v[CODE];
@@ -70,8 +69,8 @@ class DebugFunc{
 							$result[CODE][$i][PARAMS][1] = $type;       
 							$result[CODE][$i][P_TYPE][0] = 'm';
 							$result[CODE][$i][P_TYPE][1] = 'i';
-							$result[CODE][$i][P_BITS][0] = $c;
-							$result[CODE][$i][P_BITS][1] = $c;	 				
+							$result[CODE][$i][P_BITS][0] = 32;
+							$result[CODE][$i][P_BITS][1] = 32;	 				
 							$i ++; 
 						}else{
 							
@@ -83,53 +82,31 @@ class DebugFunc{
 
 		if (false !== $result){			
 			foreach ($result[CODE] as $b){
-				$c_meat_index = OrgansOperator::newUnit($b);
-
-				$array = array(
-					C => $c_meat_index,
-					COMMENT => ',gen4debug01',
-				);
-
-				$prev = ConstructionDlinkedListOpt::appendNewUnit($prev,$array);
+				$c_id = OrgansOperator::newUnitNaked($prev,$b);
+				OrgansOperator::appendComment($c_id,'gen4debug01');
 			} 			
 		}
 		return;
 	}
 
-	//
+	public static function debug_usable_array(){
+		$p_lp = false;
+		$c_lp = OrgansOperator::getBeginUnit();
 
-	public static function debug_usable_array($c_lp){
+		while ($c_lp){
 
-		$p_lp   = false;                            //上一个指针
+			$c_usable = OrgansOperator::getUsable($c_lp);
 
-		while (true){
-			$current = ConstructionDlinkedListOpt::getUnit($c_lp);
-
-			if ($current){
-
-				$n_lp = ConstructionDlinkedListOpt::nextUnit($c_lp);
-
-				$c_usable = OrgansOperator::getUsable($current[C]);
-				
-				if (false !== $c_usable[P]){
-					//echo "<br>prev $c_lp   -> $p_lp";
-					self::gen_code_4_debug_usable_array($c_usable[P],$p_lp,$c_lp,'0xaaaaaaaa');
-					//exit;
+			if ($c_usable){
+				if (isset($c_usable[P])){
+					self::gen_code_4_debug_usable_array($c_usable[P],$p_lp,'0xaaaaaaaa');
 				}
-				if (false !== $c_usable[N]){
-					//echo "<br>next $c_lp  -> $n_lp";
-					self::gen_code_4_debug_usable_array($c_usable[N],$c_lp,$n_lp,'0xbbbbbbbb');
-				}
-				
-				if (!$n_lp){
-					break;
-				}else{
-					if (!($p_lp = ConstructionDlinkedListOpt::prevUnit($n_lp))){
-						$p_lp = $c_lp;
-					}
-					$c_lp = $n_lp;
+				if (isset($c_usable[N])){
+					self::gen_code_4_debug_usable_array($c_usable[N],$c_lp,'0xbbbbbbbb');
 				}
 			}
+			$p_lp = $c_lp;
+			$c_lp = OrgansOperator::next($c_lp);
 		}
 	}
 }

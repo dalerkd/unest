@@ -181,8 +181,12 @@ class Instruction{
 		return $ret;	    
 	}
 
-	// 指令对栈的影响(读|写) 0 不影响 | true 影响(但未知) | != 0 影响字节数(byte)	
-	public static function stackEffect($asm){
+	// 指令对栈的影响(读|写) 0 不影响 | true 影响(但未知) | != 0 影响字节数(byte)
+	// 注：不完整，仅为stack balance功能 服务，见array.intl.inc.php[$stack_effects数组]
+	public static function stackEffectBytes($asm){
+		if (isset($asm[LABEL])){
+			return 0;
+		}
 		if (isset(self::$_stack_effects[$asm[OPERATION]])){
 			$sign  = self::$_stack_effects[$asm[OPERATION]][0];
 			$value = self::$_stack_effects[$asm[OPERATION]][1];
@@ -196,12 +200,16 @@ class Instruction{
 			}
 			return  $sign*$value ;
 		}
+		$param_num = 0;
+		if (isset($asm[PARAMS])){
+			$param_num = count($asm[PARAMS]);
+		}
 
-		$inst = self::getInstructionOpt($asm[OPERATION],count($asm[PARAMS]));
+		$inst = self::getInstructionOpt($asm[OPERATION],$param_num);
 		if (isset($inst[STACK])){
 			return true;
 		}
-		if (count($asm[PARAMS]) > 0){
+		if ((isset($asm[PARAMS]))and(count($asm[PARAMS]) > 0)){
 			foreach ($asm[P_TYPE] as $i => $type){
 				if ('r' === $type){
 					if (STACK_POINTER_REG === Instruction::getGeneralRegIndex($asm[PARAMS][$i])){
@@ -215,6 +223,20 @@ class Instruction{
 			}
 		}
 		return 0;
+	}
+
+	public static function isStackEffect($inst){
+		if (isset(self::$_instruction[$inst][STACK])){
+			return true;
+		}
+		if (isset(self::$_instruction[$inst]['multi_op'])){
+			foreach (self::$_instruction[$inst] as $v){
+				if (isset($v[STACK])){
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	// 获取指令别名(如果有的话)

@@ -758,7 +758,7 @@ class IOFormatParser{
 			$NumberOfRelocation = 0;
 			$rewrite_rel32 = array();
 			$newCodeSection[$a]['PointerToRelocation'] = $c_lp;		
-			if (is_array($reloc_info_2_rewrite_table[$a])){
+			if (isset($reloc_info_2_rewrite_table[$a])){
 				$NumberOfRelocation = count($reloc_info_2_rewrite_table[$a]);
 				foreach ($reloc_info_2_rewrite_table[$a] as $c => $d){
 					$c_lp += 4 + 4 + 2;

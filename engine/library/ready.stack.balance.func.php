@@ -19,10 +19,14 @@ class StackBalance{
 	// 取得stack 写操作指令 并存入 $_cut_points
 	private static function get_cut_points_from_stack_write($asm){
 		foreach ($asm as $a => $b){
-			$c_stackeffect = Instruction::stackEffect($b);
+			$c_stackeffect = Instruction::stackEffectBytes($b);
 			if (0 !== $c_stackeffect){ // stack write
 				if (true === $c_stackeffect){ // unkown ,set cut flag it
-					self::$_cut_points[$a] |= 4;
+					if (isset(self::$_cut_points[$a])){
+						self::$_cut_points[$a] |= 4;
+					}else{
+						self::$_cut_points[$a] = 4;
+					}
 				}else{
 					self::$_stack_effects[$a] = $c_stackeffect;
 				}
@@ -31,10 +35,20 @@ class StackBalance{
 	}
 	// 取得反向跳转的指令(label) 并存入 $_cut_points
 	private static function get_cut_points_from_backjmp($jmp_array){
-		foreach ($jmp_array as $a => $b){
-			if ($b < $a){
-				self::$_cut_points[$b] |= 1;
-				self::$_cut_points[$a] |= 2;
+		if (is_array($jmp_array)){
+			foreach ($jmp_array as $a => $b){
+				if ($b < $a){
+					if (isset(self::$_cut_points[$b])){
+						self::$_cut_points[$b] |= 1;
+					}else{
+						self::$_cut_points[$b]  = 1;
+					}
+					if (isset(self::$_cut_points[$a])){
+						self::$_cut_points[$a] |= 2;	
+					}else{
+						self::$_cut_points[$a]  = 2;
+					}					
+				}
 			}
 		}
 	}
@@ -114,32 +128,20 @@ class StackBalance{
 		$table_tmp = array(); // [asm_line][dir] = universe_id
 		foreach (self::$_unit as $id => $a){
 			$table_tmp[$a[0]][$a[1]] = $id;
-		}		
-		foreach ($dlist as $dlist_id => $a){
-			if (isset($a[C])){
-				if ($a[C] >= 0){
-					$asm_line = $a[C];
-					if (isset($table_tmp[$asm_line][P])){
-						$table_1[$dlist_id][P] = $table_tmp[$asm_line][P];
-						$table_2[$table_tmp[$asm_line][P]][0] = $dlist_id;
-						$table_2[$table_tmp[$asm_line][P]][1] = P;
-					}					
-					if (isset($table_tmp[$asm_line][N])){
-						$table_1[$dlist_id][N] = $table_tmp[$asm_line][N];						
-						$table_2[$table_tmp[$asm_line][N]][0] = $dlist_id;
-						$table_2[$table_tmp[$asm_line][N]][1] = N;
-					}
-				}
+		}
+		$keys = array_keys($dlist);
+		foreach ($keys as $key){
+			if (isset($table_tmp[$key][P])){
+				$table_1[$key][P] = $table_tmp[$key][P];
+				$table_2[$table_tmp[$key][P]][0] = $key;
+				$table_2[$table_tmp[$key][P]][1] = P;
+			}
+			if (isset($table_tmp[$key][N])){
+				$table_1[$key][N] = $table_tmp[$key][N];
+				$table_2[$table_tmp[$key][N]][0] = $key;
+				$table_2[$table_tmp[$key][N]][1] = N;
 			}
 		}
-		// echo "<br>table tmp";
-		// var_dump ($table_tmp);
-		// echo "<br>table 1";
-		// var_dump ($table_1);
-		// echo "<br>table 2";
-		// var_dump ($table_2);
-		// var_dump ($dlist);
-		// var_dump (self::$_unit);
 	}
 	// init
 	private static function init (){
@@ -217,7 +219,11 @@ class StackBalance{
 				echo '{<i>'."$d".'</i>|';
 				echo self::$_unit[$d][0];
 				echo '|';
-				echo $asm[self::$_unit[$d][0]][OPERATION];				
+				if (isset($asm[self::$_unit[$d][0]][OPERATION])){
+					echo $asm[self::$_unit[$d][0]][OPERATION];
+				}else{
+					var_dump (self::$_unit[$d][0]);
+				}
 				echo '}</font>';
 			}			
 			echo '</td>';
