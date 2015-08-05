@@ -168,6 +168,8 @@ class OrgansOperator{
 		self::$_unit_inst[$idx] = $inst_array;
 		//TODO self::initGPReffects($idx,$inst_array);
 		if (self::insertUnit($pos,$idx)){
+			self::$_unit_usable[$idx][P] = self::$_unit_usable[$idx][N] = array();
+			self::$_unit_forbid[$idx][P] = self::$_unit_forbid[$idx][N] = array();
 			if (isset($inst_array[LABEL])){
 				self::$_rel_jmp_label[$idx] = $inst_array[LABEL];
 			}else{				

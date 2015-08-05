@@ -136,9 +136,10 @@ class OrganMeat{
 		// var_dump ($c_opt);
 		// var_dump ($c_param_num);
 		// var_dump ($c_opt_write_effect);
+		// var_dump ($c_usable[FLAG_WRITE_ABLE]);
 		if (isset($c_opt_write_effect[FLAG_WRITE_ABLE])){
 		    foreach ($c_opt_write_effect[FLAG_WRITE_ABLE] as $i => $v){
-				if (!isset($c_usable[FLAG][$i])){
+				if (!isset($c_usable[FLAG_WRITE_ABLE][$i])){
 					$isConflict = true;
 					break;
 				}			
@@ -884,8 +885,8 @@ class OrganMeat{
 		$obj = $objs[1];
 
 		$c_obj    = OrgansOperator::getCode($obj);
-		$c_usable = OrgansOperator::getUsable($obj);	
-
+		$c_usable = OrgansOperator::getUsable($obj);
+		
 		if (isset($c_obj[OPERATION])){
 
 	        // usable of meat.obj
@@ -986,11 +987,10 @@ class OrganMeat{
 
 	        // 生成 最终指令 and insert into Organ/DList Array
 			$pos = OrgansOperator::prev($obj);
-	        self::genMeats($pos,$front_index ,$c_usable[P]);
-        
-	        self::genMeats($obj,$behind_index,$c_usable[N]);
-	       
-
+			
+			self::genMeats($pos,$front_index ,$c_usable[P]);
+			self::genMeats($obj,$behind_index,$c_usable[N]);
+			
 	        if (defined('DEBUG_ECHO') and defined('MEAT_DEBUG_ECHO')){
 	        	self::meat_shower_08();
 				self::meat_shower_02($front_index,$split_point,$c_obj,$behind_index);

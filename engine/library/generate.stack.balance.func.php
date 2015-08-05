@@ -570,6 +570,7 @@ class StackBalance{
 			OrgansOperator::addUsableReg($new_idx,N,$reg,self::$_work_ignore_forbid);
 			OrgansOperator::setGPReffects($new_idx,$reg,OPT_BITS,R);
 			OrgansOperator::setGPReffects($new_idx,STACK_POINTER_REG,OPT_BITS,W);
+			Character::initUnit($new_idx,SOUL);
 			$ret[$uid] = $new_idx;
 		}
 		
@@ -591,6 +592,7 @@ class StackBalance{
 				OrgansOperator::addUsableReg($new_idx,P,$reg,self::$_work_ignore_forbid);
 				OrgansOperator::setGPReffects($new_idx,$reg,OPT_BITS,W);
 				OrgansOperator::setGPReffects($new_idx,STACK_POINTER_REG,OPT_BITS,W);
+				Character::initUnit($new_idx,SOUL);
 				$ret[$uid] = $new_idx;
 			}
 		}
@@ -663,14 +665,16 @@ class StackBalance{
 		}
 	}
 	// start ...
-	public static function start($stackBalanceArray){
+	public static function start($stackBalanceArray,$strength){
 		SteroGraphic::unserialize($stackBalanceArray['universe']);
-		// SteroGraphic::show();
+		if (defined('DEBUG_ECHO') and defined('SBALANCE_DEBUG_ECHO')){
+			SteroGraphic::show();
+		}
 		self::init();	
 		self::import($stackBalanceArray);
 		self::genpool();
 		self::genIllUnit();
-		for ($i = 20;$i>0;$i--){ // loop number = try times 
+		for ($i = 1 ;$i <= $strength;$i++){ // loop number = try times 
 			self::initwork();
 			if (self::genPair()){
 				$result_array = self::genInsertDirection();
@@ -693,7 +697,10 @@ class StackBalance{
 					GeneralFunc::LogInsert("SteroGraphic::insert_balance_pair() return false!",WARNING);
 					continue;
 				}
-				// SteroGraphic::show();
+				if (defined('DEBUG_ECHO') and defined('SBALANCE_DEBUG_ECHO')){
+					echo "<br>###### after [$i]<br>";
+					SteroGraphic::show();
+				}
 				// 识别是否可忽略当前范围内register forbid(s)
 				self::$_work_ignore_forbid = self::isNotReadRegister($effects,$usableRegister);
 				// 4.insert DList

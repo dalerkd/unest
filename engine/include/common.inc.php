@@ -7,7 +7,8 @@ require dirname(__FILE__)."/language.inc.php";
 
 // rel_jmp range 极限保留字节数 (小于此数,所有单位character.Rate清除)
 define ('MIN_REL_JMP_RANGE_RESERVE',5);
-
+// intel x86 stack pointer
+define ('STACK_POINTER_REG','ESP');
 // 用户可设置变量部分
 $user_option['del_last_nop'] = true; //自动去掉节表末尾用来对齐的 nop 以及 0xcch
 // processor bits

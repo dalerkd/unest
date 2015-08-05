@@ -215,10 +215,12 @@ class ReadyFunc{
 					unset($a[$z][REG]);
 				}
 				foreach ($b[$z] as $c => $d){
-					if ($a[$z][$c] == $d){ // 有 完全相同的
-						$ret[$z][$c] = $d;
-						continue;
-					}				
+					if (isset($a[$z][$c])){
+						if ($a[$z][$c] == $d){ // 有 完全相同的
+							$ret[$z][$c] = $d;
+							continue;
+						}
+					}
 					$c_bits = 8;
 					$c_opt  = 1;
 					foreach ($a[$z] as $e => $f){ // 保守 取得
@@ -875,7 +877,7 @@ class ReadyFunc{
 					$list_id_ptr ++;
 					$exec_thread_list[$c_thread_id][$list_id_ptr] = $exec_thread_list[$c_thread_id][$list_id];
 					$c_enumming_array[$list_id_ptr] = $c_line + 1;	    
-					if ($c_solid_jmp_to[$c_line]){ //有明确跳转 dest
+					if ((isset($c_solid_jmp_to[$c_line]))and($c_solid_jmp_to[$c_line])){ //有明确跳转 dest
 						if ($c_solid_jmp_to[$c_line] <= $c_line){ //回跳记录							
 							if (false !== array_search($c_line,$old)){
 								$exec_thread_list[$c_thread_id][$list_id][] = '-'; //跳转标志
@@ -1068,10 +1070,19 @@ class ReadyFunc{
 							//前缀 对 通用/标志 寄存器的影响//
 							foreach (Instruction::getInstructionOpt($x) as $z => $y){
 								if (Instruction::isEflag($z)){
-									$flag_register_opt_array[$a][$c][$z] |= $y;
+									if (isset($flag_register_opt_array[$a][$c][$z])){
+										$flag_register_opt_array[$a][$c][$z] |= $y;
+									}else{
+										$flag_register_opt_array[$a][$c][$z] = $y;
+									}
 								}elseif (Instruction::getGeneralRegBits($z)){ //32位指令 修改 寄存器都 为32位
 									$cri = Instruction::getGeneralRegIndex($z);
-									$normal_register_opt_array[$a][$c][$cri][32] |= $y;
+									if (isset($normal_register_opt_array[$a][$c][$cri][32])){
+										$normal_register_opt_array[$a][$c][$cri][32] |= $y;
+									}else{
+										$normal_register_opt_array[$a][$c][$cri][32] = $y;
+									}
+									
 								}
 							}
 

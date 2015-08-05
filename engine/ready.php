@@ -14,10 +14,6 @@ require_once dirname(__FILE__)."/../nasm.inc.php";
 Instruction::init();
 
 //////////////////////////////////////////
-//堆栈指针 寄存器
-define ('STACK_POINTER_REG','ESP');
-
-//////////////////////////////////////////
 //捕获超时
 $complete_finished = false; //执行完成标志
 register_shutdown_function('shutdown_except');
@@ -63,7 +59,7 @@ if (!GeneralFunc::LogHasErr()){
 	////////////////////////////////////////////////////////
 	//目标处理文件格式处理
 		$myTables = array();
-		$handle = fopen(CfgParser::params('filename'),'rb');
+		@$handle = fopen(CfgParser::params('filename'),'rb');
 		if (!$handle){
 			GeneralFunc::LogInsert('fail to open file:'.CfgParser::params('filename'));
 		}else{
@@ -341,10 +337,13 @@ if (!GeneralFunc::LogHasErr()){
 		$soul_writein_Dlinked_List_Total[$sec] = $soul_writein_Dlinked_List;
 	}
 }    
+
+if (!GeneralFunc::LogHasErr()){
 // 所有元素key与Dlinked_List' key 统一
 // var_dump ($valid_mem_opt_array);
-if (!ReadyFunc::unified_by_DList_key()){
-	GeneralFunc::LogInsert('fail to call ReadyFunc::unified_by_DList_key()',ERROR);
+	if (!ReadyFunc::unified_by_DList_key()){
+		GeneralFunc::LogInsert('fail to call ReadyFunc::unified_by_DList_key()',ERROR);
+	}
 }
 // var_dump ($valid_mem_opt_array);
 // echo '<br>HIRO:';
@@ -511,7 +510,9 @@ if (!GeneralFunc::LogHasErr()){
 }
 echo "<br><br><br><br>";
 echo "binary size: ";
-var_dump ($asm_size);
+if (isset($asm_size)){
+	var_dump ($asm_size);
+}
 echo "<br><br><br><br>";
 
 $complete_finished = true;

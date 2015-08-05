@@ -161,53 +161,6 @@ class GeneralFunc{
 		return $ret;
 	}
 	
-	// 识别 目标指令是否需要ipsp保护
-	// public static function is_effect_ipsp($asm,$rule = 1,$sp_define = false){
-
-
-
-	
-
-		
-	// 	if (Instruction::isJmp($asm[OPERATION])){ //绝对 或 相对 跳转
-	// 		return true;
-	// 	}
-
-	// 	$operand_num = 0;
-	// 	if (isset($asm[P_TYPE])){
-	// 		$operand_num = count($asm[P_TYPE]);
-	// 	}
-
-	// 	$opt = Instruction::getInstructionOpt($asm[OPERATION],$operand_num);
-
-	// 	if (isset($opt[STACK])){
-	// 		return true;
-	// 	}
-		
-	// 	if ((isset($asm[PARAMS])) and (is_array($asm[PARAMS]))){ //参数，寄存器SP 或 ESP ，读或写 操作	
-	// 		foreach ($asm[PARAMS] as $a => $b){
-	// 			if ('i' !== $asm[P_TYPE][$a]){
-	// 				if ((0 === $rule) and (isset($opt[$a])) and ($opt[$a] <= 1)){
-	// 					continue;
-	// 				}
-	// 				if ((isset($opt[$a])) and ($opt[$a] < 1)){ // lea
-	// 					continue;
-	// 				}
-	// 				if ('r' === $asm[P_TYPE][$a]){
-	// 					if (Instruction::getGeneralRegIndex($b) == STACK_POINTER_REG){
-	// 						return true;
-	// 					}
-	// 				}
-	// 				if ((false !== $sp_define)&&('m' === $asm[P_TYPE][$a])){
-	// 					if (preg_match('/'."$sp_define".'/',$b)){						
-	// 						return true;
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	return false;
-	// }
 	// 确定 POST or Get 传递进来的动态插入数据
 	public static function get_dynamic_insert_value (&$dynamic_insert){
 

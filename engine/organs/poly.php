@@ -286,14 +286,14 @@ class OrganPoly{
 				foreach (self::$_poly_model_repo[$obj][$b][NEW_REGS][NORMAL] as $c => $d){ //目前 仅考虑 32位 通用寄存器
 					if (Instruction::getGeneralRegIndex($org[PARAMS][$c])){        //原始指令参数中的通用寄存器
 						$c = Instruction::getGeneralRegIndex($org[PARAMS][$c]);
-						if (!$c_usable[N][NORMAL_WRITE_ABLE][$c][32]){ //仅 检查 Next 部分，见 readme_poly.txt 2013/04/19
+						if ((!isset($c_usable[N][NORMAL_WRITE_ABLE][$c][32]))or(!$c_usable[N][NORMAL_WRITE_ABLE][$c][32])){ //仅 检查 Next 部分，见 readme_poly.txt 2013/04/19
 							//echo "<br> $sec $line $c";
 							unset ($usable_poly_model[$a]);
 							$break = true;
 							break;
 						}
 					}elseif (Instruction::getGeneralRegIndex($c)){                   //独立的通用寄存器
-						if (!$c_usable[N][NORMAL_WRITE_ABLE][$c][32]){ 
+						if ((!isset($c_usable[N][NORMAL_WRITE_ABLE][$c][32]))or(!$c_usable[N][NORMAL_WRITE_ABLE][$c][32])){
 							unset ($usable_poly_model[$a]);
 							$break = true;
 							break;

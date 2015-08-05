@@ -2,7 +2,6 @@
 
 //////////////////////////////////////////
 //堆栈指针 寄存器
-define ('STACK_POINTER_REG','ESP');
 require dirname(__FILE__)."/include/common.inc.php";
 require dirname(__FILE__)."/library/general.func.php";
 require dirname(__FILE__)."/library/generate.func.php";
@@ -66,7 +65,11 @@ if (!GeneralFunc::LogHasErr()){
 			if ((isset($a['all'])) or (isset($a['char']))){
 				define ('CHARACTER_DEBUG_ECHO',true);
 				echo "<br><font color=blue><b>* CHARACTER_DEBUG_ECHO</b></font>";
-			}			
+			}
+			if ((isset($a['all'])) or (isset($a['sbalance']))){
+				define ('SBALANCE_DEBUG_ECHO',true);
+				echo "<br><font color=blue><b>* SBALANCE_DEBUG_ECHO</b></font>";
+			}						
 		}
 	}
 	set_time_limit(CfgParser::params('timelimit'));	
@@ -172,8 +175,7 @@ foreach ($CodeSectionArray as $sec => $body){
 
 	if (defined('DEBUG_ECHO') and defined('SEC_DEBUG_ECHO')){
 		DebugShowFunc::my_shower_01($sec,NULL);
-	}
-	// OrgansOperator::show();
+	}	
 
 	if (GeneralFunc::LogHasErr()){
 		break;
@@ -205,12 +207,20 @@ foreach ($CodeSectionArray as $sec => $body){
 	}
 
 	// stack balance gen
-	GenerateFunc::do_ready();
-	StackBalance::start($stack_balance_array[$sec]);
-	if (true === GenerateFunc::check_rollback($sec,'stack balance',$MaxBinSize)){
-		$OverMaxBinSize = true;
+	$c_strength = CfgParser::GetStrength($sec);
+	$sb_min = $sb_max = 0;
+	if (isset($c_strength['SBAL']['min'])){$sb_min = intval($c_strength['SBAL']['min']);}
+	if (isset($c_strength['SBAL']['max'])){$sb_max = intval($c_strength['SBAL']['max']);}
+	$sb_strength = mt_rand($sb_min,$sb_max);
+	if ($sb_strength > 0){
+		var_dump ($sb_strength);
+		GenerateFunc::do_ready();
+		StackBalance::start($stack_balance_array[$sec],$sb_strength);
+		if (true === GenerateFunc::check_rollback($sec,'stack balance',$MaxBinSize)){
+			$OverMaxBinSize = true;
+		}
 	}
-
+	// OrgansOperator::show();
 	// 测试soul_usable 项是否有问题,所有可写单位(寄存器,内存地址)和可读单位(内存地址)都写入操作代码，(注:flag目前不管)
 	//                             这样...当soul_usable有问题，我们就能通过运行结构文件发现了(除不会出错的那种问题...)
 	if ((isset($c_user_cnf['gen4debug01'])) and (true === $c_user_cnf['gen4debug01'])){

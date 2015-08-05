@@ -379,7 +379,7 @@ class CfgParser{
 								}
 							}
 							foreach ($v as $sec_id){
-								self::$_user_cnf[$sec_id]              = $all_configure_array[$i];
+								self::$_user_cnf[$sec_id]       = $all_configure_array[$i];
 								self::$_user_strength[$sec_id]  = $all_configure_array[$i]['strength'];
 							}
 						}		
@@ -489,6 +489,16 @@ class CfgParser{
 				$c_ret['strength'][MEAT]['min'] = intval($value);
 				return true;
 			}
+		}elseif ('@strength_sbal_min' === $name){
+			if (is_numeric($value)){
+				$c_ret['strength']['SBAL']['min'] = intval($value);
+				return true;
+			}		
+		}elseif ('@strength_sbal_max' === $name){
+			if (is_numeric($value)){
+				$c_ret['strength']['SBAL']['max'] = intval($value);
+				return true;
+			}		
 		}elseif ('@strength_default' === $name){
 			if (is_numeric($value)){
 				$c_ret['strength']['default'] = intval($value);
