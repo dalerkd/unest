@@ -1,8 +1,8 @@
 [bits 32]
 
 db 0cch
+sub esp,20h
 mov eax,esp
-sub eax,20h
 push eax
 push eax
 call myFunc
