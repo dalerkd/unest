@@ -370,12 +370,16 @@ class CfgParser{
 						foreach ($sec_name as $c_name => $v){
 							$i = $section_array[$c_name];
 							self::$_user_config[$c_name]            = $all_configure_array[$i]['unprotect'];
-							self::$_user_config[$c_name]['protect'] = $all_configure_array[$i]['protect'];
-							if (true === $all_configure_array[$i]['stack_usable']){
-								self::$_user_config[$c_name]['stack_usable'] = true;
+							if (isset($all_configure_array[$i]['protect'])){
+								self::$_user_config[$c_name]['protect'] = $all_configure_array[$i]['protect'];
+							}
+							if (isset($all_configure_array[$i]['stack_usable'])){
+								if (true === $all_configure_array[$i]['stack_usable']){
+									self::$_user_config[$c_name]['stack_usable'] = true;
+								}
 							}
 							foreach ($v as $sec_id){
-								self::$_user_cnf[$sec_id]              = $all_configure_array[$i];
+								self::$_user_cnf[$sec_id]       = $all_configure_array[$i];
 								self::$_user_strength[$sec_id]  = $all_configure_array[$i]['strength'];
 							}
 						}		
@@ -485,6 +489,16 @@ class CfgParser{
 				$c_ret['strength'][MEAT]['min'] = intval($value);
 				return true;
 			}
+		}elseif ('@strength_sbal_min' === $name){
+			if (is_numeric($value)){
+				$c_ret['strength']['SBAL']['min'] = intval($value);
+				return true;
+			}		
+		}elseif ('@strength_sbal_max' === $name){
+			if (is_numeric($value)){
+				$c_ret['strength']['SBAL']['max'] = intval($value);
+				return true;
+			}		
 		}elseif ('@strength_default' === $name){
 			if (is_numeric($value)){
 				$c_ret['strength']['default'] = intval($value);
@@ -569,90 +583,39 @@ class CfgParser{
 
 	}
 
-	////////////////////////////////////////////////////////////////////////////////
-	//
-	//根据 用户 对 节表 定义，对 soul_usable 进行增加 (除soul_forbid 显式禁止的外)
-	//
-	public static function reconfigure_soul_usable ($sec_name,$soul_writein_Dlinked_List_Total,&$soul_usable,$soul_forbid){
-		global $StandardAsmResultArray;
-		global $all_valid_mem_opt_index;
-		global $avmoi_ptr;
-
-		foreach ($sec_name as $a => $b){	    
-			if (empty(self::$_user_config[$a])){
-				continue;
-			}
+	// 根据 用户 对 节表 定义，对 soul_usable 进行增加 (除soul_forbid 显式禁止的外)
+	public static function reconfigure_soul_usable ($sec){	
 		
-			$c_define = self::$_user_config[$a]; 
-			foreach ($b as $c => $d){
-				$c_list = $soul_writein_Dlinked_List_Total[$d]['list'][0]; //未 多态/混淆 ，起始位默认是0
-				while (true){				
-					$f = $c_list[C]; 
-					if (true === $c_define['protect']['thread_memory']){   //禁止所有内存地址 可写入 属性
-						if (is_array($soul_usable[$d][$f][P][MEM_OPT_ABLE])){
-							foreach ($soul_usable[$d][$f][P][MEM_OPT_ABLE] as $z => $y){
-								if (1 < $all_valid_mem_opt_index[$y][OPT]){
-									$all_valid_mem_opt_index[$avmoi_ptr] = $all_valid_mem_opt_index[$y];
-									$all_valid_mem_opt_index[$avmoi_ptr][OPT] &= 1;
-									$soul_usable[$d][$f][P][MEM_OPT_ABLE][$z] = $avmoi_ptr;
-									$avmoi_ptr ++;
-								}
-							}
-						}
-						if (is_array($soul_usable[$d][$f][N][MEM_OPT_ABLE])){
-							foreach ($soul_usable[$d][$f][N][MEM_OPT_ABLE] as $z => $y){
-								if (1 < $all_valid_mem_opt_index[$y][OPT]){
-									$all_valid_mem_opt_index[$avmoi_ptr] = $all_valid_mem_opt_index[$y];
-									$all_valid_mem_opt_index[$avmoi_ptr][OPT] &= 1;
-									$soul_usable[$d][$f][N][MEM_OPT_ABLE][$z] = $avmoi_ptr;
-									$avmoi_ptr ++;
-								}
-							}
-						}
-					}
-					//foreach ($StandardAsmResultArray[$d] as $f => $g){				
-					if (isset($c_define[FLAG])){
-						foreach ($c_define[FLAG] as $z => $y){
-							if (!isset($soul_forbid[$d][$f][P][FLAG][$z])){
-								$soul_usable[$d][$f][P][FLAG_WRITE_ABLE][$z] = $y;
-							}
-							if (!isset($soul_forbid[$d][$f][N][FLAG][$z])){
-								$soul_usable[$d][$f][N][FLAG_WRITE_ABLE][$z] = $y;
-							}
-						}
-					}
-					//通用寄存器，方便起见，forbid显式禁止 以寄存器为单位，不细分到位
-					if (isset($c_define[NORMAL])){
-						foreach ($c_define[NORMAL] as $z => $y){
-							if (!isset($soul_forbid[$d][$f][P][NORMAL][$z])){
-								foreach ($c_define[NORMAL][$z] as $x => $w){
-									$soul_usable[$d][$f][P][NORMAL_WRITE_ABLE][$z][$x] = $y;
-								}
-							}
-							if (!isset($soul_forbid[$d][$f][N][NORMAL][$z])){
-								foreach ($c_define[NORMAL][$z] as $x => $w){
-									$soul_usable[$d][$f][N][NORMAL_WRITE_ABLE][$z][$x] = $y;
-								}
-							}
-						}
-					}
+		$c_define = self::$_user_cnf[$sec]; 
 
-					if (true === $c_define['stack_usable']){   //设置所有栈有效 and 清除所有单位可用ESP,  见./readme/readme.config.txt
-						unset ($soul_usable[$d][$f][P][NORMAL_WRITE_ABLE]['ESP']);
-						unset ($soul_usable[$d][$f][N][NORMAL_WRITE_ABLE]['ESP']);
-						$soul_usable[$d][$f][P][STACK] = true;
-						$soul_usable[$d][$f][N][STACK] = true;
-						$StandardAsmResultArray[$d][$f][STACK] = true;
-					}
-					///////////////////////////////////////////////////////
-					//
-					if (isset($c_list[N])){
-						$c_list = $soul_writein_Dlinked_List_Total[$d]['list'][$c_list[N]];
-					}else{
-						break;
-					}
-				}			
+		$c = OrgansOperator::getBeginUnit();
+		while ($c){
+			if (isset($c_define['protect']['thread_memory'])){
+				//TODO: 此处禁用后有机会恢复ReadyFunc::scan_affiliate_usable()中被禁用的与内存地址相关的寄存器
+				OrgansOperator::removeWritableMem($c,P);
+				OrgansOperator::removeWritableMem($c,N);
 			}
+			if (isset($c_define['unprotect'][FLAG])){
+				foreach ($c_define['unprotect'][FLAG] as $z => $y){
+					OrgansOperator::addUsableFlag($c,P,$z);
+					OrgansOperator::addUsableFlag($c,N,$z);
+				}
+			}
+			//通用寄存器，方便起见，forbid显式禁止 以寄存器为单位，不细分到位
+			if (isset($c_define['unprotect'][NORMAL])){
+				foreach ($c_define['unprotect'][NORMAL] as $z => $y){
+					OrgansOperator::addUsableReg($c,P,$z,false);
+					OrgansOperator::addUsableReg($c,N,$z,false);					
+				}
+			}
+			if (isset($c_define['stack_usable'])){
+				if (true === $c_define['stack_usable']){   //设置所有栈有效 and 清除所有单位可用ESP,  见./readme/readme.config.txt
+					OrgansOperator::removeStackRegUsable($c,P);
+					OrgansOperator::removeStackRegUsable($c,N);
+					OrgansOperator::setStackValid($c);
+				}
+			}
+			$c = OrgansOperator::next($c);
 		}
 	}
 
@@ -672,7 +635,7 @@ class CfgParser{
 
 	//显示用户设置
 	public static function show($sec_name){
-		echo "<br>============= 显示用户设置 ( ".self::$_user_params['base'].'/'.$_user_params['cnf']." ) ============= <br>";
+		echo "<br>============= 显示用户设置 ( ".self::$_user_params['base'].'/'.self::$_user_params['cnf']." ) ============= <br>";
 		foreach ($sec_name as $sec_name_show => $a){
 			$save = false;
 			$total_sec_num = array();

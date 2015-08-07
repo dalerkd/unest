@@ -101,7 +101,7 @@ void CdemoDlg::OnBnClickedOk()
 
 	char * lpBuff = (LPSTR)(LPCTSTR)str;
 
-	memcpy(buff,lpBuff,256);
+	memcpy(buff,lpBuff,strlen(lpBuff));
 
 	_asm{int 3h}
 	_asm{pushad}

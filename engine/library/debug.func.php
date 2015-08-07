@@ -8,16 +8,11 @@ class DebugFunc{
 
 	//////////////////////////////////////////////////////
 	//
-	//生成 血肉
-	//$usable : 可用范围
-	//$prev   : 上一个链表 index，无则为false;
-	//$next   : 下一个链表 index，无则为false;
-	//$type   : 调试用 ... 特殊标记 产生特殊血肉
-	private static function gen_code_4_debug_usable_array($usable,$prev,$next,$type = '0x0cccccccc'){
-		
-		global $all_valid_mem_opt_index;
-
-
+	// 生成 血肉
+	// $usable : 可用范围
+	// $prev   : 上一个链表 index，无则为false;
+	// $type   : 调试用 ... 特殊标记 产生特殊血肉
+	private static function gen_code_4_debug_usable_array($usable,$prev,$type = '0x0cccccccc'){
 		
 		$result = false;
 		$i = 0;    
@@ -62,10 +57,10 @@ class DebugFunc{
 		//}
 
 		
-		if (is_array($usable[MEM_OPT_ABLE])){
-			foreach ($usable[MEM_OPT_ABLE] as $a => $b){	
-				$z = $all_valid_mem_opt_index[$b][CODE];
-				$v = $all_valid_mem_opt_index[$b];
+		if (isset($usable[MEM_OPT_ABLE])){
+			foreach ($usable[MEM_OPT_ABLE] as $a => $b){
+				$v = ValidMemAddr::get($b);
+				$z = $v[CODE];
 				if ($v[OPT] >= 2){
 					if ($v[BITS] == 32){
 						if (false === strpos($z,'_RELINFO_')){ //含重定位的内存地址，暂不处理
@@ -74,8 +69,8 @@ class DebugFunc{
 							$result[CODE][$i][PARAMS][1] = $type;       
 							$result[CODE][$i][P_TYPE][0] = 'm';
 							$result[CODE][$i][P_TYPE][1] = 'i';
-							$result[CODE][$i][P_BITS][0] = $c;
-							$result[CODE][$i][P_BITS][1] = $c;	 				
+							$result[CODE][$i][P_BITS][0] = 32;
+							$result[CODE][$i][P_BITS][1] = 32;	 				
 							$i ++; 
 						}else{
 							
@@ -85,92 +80,34 @@ class DebugFunc{
 			}
 		}
 
-		if (false !== $result){
-			$c_meat_index = OrganMeat::append($result);//$meat_result_array[$UNIQUE_meat_index] = $result;				
-			foreach ($result[CODE] as $a => $b){
-				if (false !== $prev){
-
-					ConstructionDlinkedListOpt::setDlinkedList(ConstructionDlinkedListOpt::getDlinkedListIndex(),$prev,N);				
-				}else{
-
-					ConstructionDlinkedListOpt::setListFirstUnit();
-
-				}
-
-				ConstructionDlinkedListOpt::setDlinkedList($prev,ConstructionDlinkedListOpt::getDlinkedListIndex(),P);
-
-				ConstructionDlinkedListOpt::setDlinkedList($c_meat_index,ConstructionDlinkedListOpt::getDlinkedListIndex(),MEAT);
-
-				ConstructionDlinkedListOpt::setDlinkedList($a,ConstructionDlinkedListOpt::getDlinkedListIndex(),C);
-				//
-				//label 暂未考虑
-				//if (isset($b[LABEL])){
-				//
-				//}
-
-				$prev = ConstructionDlinkedListOpt::getDlinkedListIndex();
-		
-				ConstructionDlinkedListOpt::incDlinkedListIndex();
-			} 
-			if (false !== $next){
-
-				ConstructionDlinkedListOpt::setDlinkedList(ConstructionDlinkedListOpt::getDlinkedListIndex() - 1,$next,P);
-
-				ConstructionDlinkedListOpt::setDlinkedList($next,ConstructionDlinkedListOpt::getDlinkedListIndex() - 1,N);
-			}
-			//$UNIQUE_meat_index ++;
+		if (false !== $result){			
+			foreach ($result[CODE] as $b){
+				$c_id = OrgansOperator::newUnitNaked($prev,$b);
+				OrgansOperator::appendComment($c_id,'gen4debug01');
+			} 			
 		}
 		return;
 	}
 
-	//
+	public static function debug_usable_array(){
+		$p_lp = false;
+		$c_lp = OrgansOperator::getBeginUnit();
 
-	public static function debug_usable_array($c_lp){		
+		while ($c_lp){
 
+			$c_usable = OrgansOperator::getUsable($c_lp);
 
-		$p_lp   = false;                            //上一个指针
-		$n_lp   = false;                            //下一个指针
-
-
-
-		while (true){
-			if (ConstructionDlinkedListOpt::issetDlinkedListUnit($c_lp,N)){
-				$n_lp = ConstructionDlinkedListOpt::getDlinkedList($c_lp,N);
-			}else{
-				$n_lp = false;
-			}
-
-			$current = ConstructionDlinkedListOpt::getDlinkedList($c_lp);
-
-			$c_usable = OrgansOperator::Get(SOUL,$current[C],USABLE);
-			
-			if (false !== $c_usable[P]){
-				//echo "<br>prev $c_lp   -> $p_lp";
-				self::gen_code_4_debug_usable_array($c_usable[P],$p_lp,$c_lp,'0xaaaaaaaa');
-				//exit;
-			}
-			if (false !== $c_usable[N]){
-				//echo "<br>next $c_lp  -> $n_lp";
-				self::gen_code_4_debug_usable_array($c_usable[N],$c_lp,$n_lp,'0xbbbbbbbb');
-			}
-
-
-			//echo "<br>$c_lp";
-			//var_dump ($current);
-			//var_dump ($c_usable);
-
-			if (false === $n_lp){
-				break;
-			}else{
-				if (ConstructionDlinkedListOpt::issetDlinkedListUnit($n_lp,P)){
-					$p_lp = ConstructionDlinkedListOpt::getDlinkedList($n_lp,P);
-				}else{
-					$p_lp = $c_lp;
+			if ($c_usable){
+				if (isset($c_usable[P])){
+					self::gen_code_4_debug_usable_array($c_usable[P],$p_lp,'0xaaaaaaaa');
 				}
-				$c_lp = $n_lp;
+				if (isset($c_usable[N])){
+					self::gen_code_4_debug_usable_array($c_usable[N],$c_lp,'0xbbbbbbbb');
+				}
 			}
+			$p_lp = $c_lp;
+			$c_lp = OrgansOperator::next($c_lp);
 		}
-
 	}
 }
 

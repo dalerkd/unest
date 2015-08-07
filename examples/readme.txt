@@ -19,6 +19,7 @@
 windows 驱动程序 (编译连接器: WDK 7600.16385.1)
 
 实现功能：dbprint输出，混淆目标：输出字符串的构造
+注:链接命令见build后目录下log文件,如debug版本需去除debug相关项,因为混淆后原符号表已失效
 
 ./2.config                                     混淆配置文件
 
@@ -46,13 +47,15 @@ windows 驱动程序 (编译连接器: WDK 7600.16385.1)
 对静态库进行混淆，进而影响所有链接的代码
 
 实现功能: 对静态库libcmt.lib中的memset.obj进行混淆，然后再写回lib,代码使用静态连接其提供的memset函数，可以看到效果
+注: 解包命令 lib.exe libcmt.lib /EXTRACT:memset.obj
+    写回命令 lib.exe libcmt.lib memset.obj
 
 ./4.config    混淆配置文件
 
-./4/Release/libcmt.lib.origi                   vs2010自带libcmt库
-./4/Release/memset.obj.origi                   vs2010自带libcmt库中导出的memset.obj
-./4/Release/memset.obj.unest                   经过混淆处理后的memset.obj
-./4/Release/libcmt.lib.unest                   经过混淆处理后的memset.obj 导入替换后的 libcmt.lib
+./4/Release/libcmt.origi.lib                   vs2010自带libcmt库
+./4/Release/memset.origi.obj                   vs2010自带libcmt库中导出的memset.obj
+./4/Release/memset.unest.obj                   经过混淆处理后的memset.obj
+./4/Release/libcmt.unest.lib                   经过混淆处理后的memset.obj 导入替换后的 libcmt.lib
 
 
 ./4/Release/test.origi.exe                     使用自带libcmt库编译的demo执行文档

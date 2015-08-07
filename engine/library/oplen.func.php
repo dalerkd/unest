@@ -32,23 +32,24 @@ class OpLen{
 	//
 	//注:所有['range']未知的rel.jmp，返回可能的最大长度(非false)
 	//
-	public static function code_len($opt,$ignore_m = false){
-
-	
+	public static function code_len($opt,$ignore_m = false,$range=false){
+		if (isset($opt[LABEL])){
+			return 0;
+		}	
 		
 		if (('CALL' === $opt[OPERATION]) and ('i' === $opt[P_TYPE][0])){
 			return 5;
 		}
 
 		if (('JMP' === $opt[OPERATION]) and ('i' === $opt[P_TYPE][0])){
-			if ((isset($opt['range'])) and ($opt['range'] <= 127)){
+			if (($range) and ($range <= 127)){
 				return 2;
 			}
 			return 5;		
 		}
 	     
 		if ($a = Instruction::getJmpRangeLmt($opt[OPERATION])){
-			if (($opt['range'] > $a) and (isset($opt['range']))){
+			if (($range)and($range > $a)){
 				return false;
 			}
 			return 2;
@@ -58,16 +59,13 @@ class OpLen{
 		global $opcode_len_result;
 		
 
-		$opcode_len = 0;
-		if (isset($opt[PREFIX])){
-			$opcode_len = count($opt[PREFIX]);    
-		}
-		$p_number = count($opt[P_TYPE]);
+		$opcode_len = isset($opt[PREFIX])?count($opt[PREFIX]):0;
+		$p_number   = isset($opt[P_TYPE])?count($opt[P_TYPE]):0;
 
 		
 		if (Instruction::getMatchCC($opt[OPERATION])){ //XXXcc 条件指令
 			if (Instruction::isMatchCC('Jcc',$opt[OPERATION])){ //简化计算，按最大
-				if ((isset($opt['range'])) and ($opt['range'] <= 127)){
+				if (($range) and ($range <= 127)){
 					return 2;
 				}
 				return 6;
@@ -81,7 +79,7 @@ class OpLen{
 		}
 		$result = false; 
 		$oplen = 0;
-		if (!is_array($possible_arrays)){ //无匹配对象,指令?
+		if ((!isset($possible_arrays))or(!is_array($possible_arrays))){ //无匹配对象,指令?
 			echo "<br>no match OP: $p_number";
 			var_dump($opt);
 		}else{

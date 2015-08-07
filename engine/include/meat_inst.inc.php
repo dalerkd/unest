@@ -245,12 +245,12 @@ $meat_inst['IMUL'][] = array('rate' => 0,'operation' => 'IMUL','p_type' => array
 $meat_inst['SETZ'][] = array('rate' => 0,'operation' => 'SETZ','p_type' => array('r'),'p_bits' => array(8));
 $meat_inst['SETZ'][] = array('rate' => 0,'operation' => 'SETZ','p_type' => array('m'),'p_bits' => array(8));
 //###########################################################################################################################
-$meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('r'),'p_bits' => array(32));		    
-$meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('m'),'p_bits' => array(32));
-$meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('r'),'p_bits' => array(16));	    
-$meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('m'),'p_bits' => array(16));
-$meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('r'),'p_bits' => array(8));			    
-$meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('m'),'p_bits' => array(8));
+// $meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('r'),'p_bits' => array(32));		    
+// $meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('m'),'p_bits' => array(32));
+// $meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('r'),'p_bits' => array(16));	    
+// $meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('m'),'p_bits' => array(16));
+// $meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('r'),'p_bits' => array(8));			    
+// $meat_inst['IDIV'][] = array('rate' => 0,'operation' => 'IDIV','p_type' => array('m'),'p_bits' => array(8));
 //###########################################################################################################################
 $meat_inst['SHL'][] = array('rate' => 0,'operation' => 'SHL','p_type' => array('r','i'),'p_bits' => array(32,8));
 $meat_inst['SHL'][] = array('rate' => 0,'operation' => 'SHL','p_type' => array('m','i'),'p_bits' => array(32,8));

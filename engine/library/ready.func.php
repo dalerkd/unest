@@ -7,45 +7,31 @@ if(!defined('UNEST.ORG')) {
 /******************************************/
 //organ.func.php (for ready)
 
-class OrgansOperator{
-	private static $_Asm_Result;
+// class OrgansOperator{
+// 	private static $_Asm_Result;
 
-    //init
-	public static function init($sec){
-        global $StandardAsmResultArray;
+//     //init
+// 	public static function init($sec){
+//         global $StandardAsmResultArray;
     
-        self::$_Asm_Result  = $StandardAsmResultArray[$sec];       
-	}
+//         self::$_Asm_Result  = $StandardAsmResultArray[$sec];       
+// 	}
 
+// 	// 根据 下标 直接获取
+// 	public static function Get($num){
+// 		return isset(self::$_Asm_Result[$num])?self::$_Asm_Result[$num]:NULL;
+// 	}
 
-    //根据 双链表 单位 返回 organ 单位
-	//params:
-	//         $unit:     DList' unit (array)
-	//         $branch: CODE | USABLE | FAT
-	//         $status: sub index  
-	public static function GetByDListUnit($unit,$branch=CODE,$key=false){
-		
-		$ret = false;
-
-		if (isset(self::$_Asm_Result[$unit[C]])){
-			$ret = self::$_Asm_Result[$unit[C]];
-		}
-		
-		if ((false !== $key) and (false !== $ret)){
-		    if (isset($ret[$key])){
-			    $ret = $ret[$key];
-			}else{
-			    $ret = false;
-			}
-		}
-	    return $ret;
-	}
-}
+// 	public static function appendComment(){}
+// 	public static function getCode($id){
+// 		return isset(self::$_Asm_Result[$id])?self::$_Asm_Result[$id]:false;
+// 	}
+// }
 /******************************************/
 //用于 准备 的 函数 集
 
 class ReadyFunc{
-
+	
 	//////////////////////////////////////////////////////
 	// 1 去掉 所有可用记录 中的 空 行 
 	// 2 使用 可用内存记录索引数组，一种可用内存 具体描述 保存在索引中，使用的地方都是调用
@@ -128,11 +114,15 @@ class ReadyFunc{
 				unset ($ret[$code][8]);
 			}
 			if ($c[32] == 1){
-				if (1 == $ret[$code][16]){
-					unset ($ret[$code][16]);
+				if (isset($ret[$code][16])){
+					if (1 == $ret[$code][16]){
+						unset ($ret[$code][16]);
+					}
 				}
-				if (1 == $ret[$code][8]){
-					unset ($ret[$code][8]);
+				if (isset($ret[$code][8])){
+					if (1 == $ret[$code][8]){
+						unset ($ret[$code][8]);
+					}
 				}
 				continue;
 			}elseif ($c[16] == 1){
@@ -225,10 +215,12 @@ class ReadyFunc{
 					unset($a[$z][REG]);
 				}
 				foreach ($b[$z] as $c => $d){
-					if ($a[$z][$c] == $d){ // 有 完全相同的
-						$ret[$z][$c] = $d;
-						continue;
-					}				
+					if (isset($a[$z][$c])){
+						if ($a[$z][$c] == $d){ // 有 完全相同的
+							$ret[$z][$c] = $d;
+							continue;
+						}
+					}
 					$c_bits = 8;
 					$c_opt  = 1;
 					foreach ($a[$z] as $e => $f){ // 保守 取得
@@ -354,8 +346,10 @@ class ReadyFunc{
 
 
 		$ret = array();
-		$ret[REG] = $new[REG];
-		unset ($new[REG]);
+		if (isset($new[REG])){
+			$ret[REG] = $new[REG];
+			unset ($new[REG]);
+		}
 		foreach ($new  as $a => $b){
 			if ($old_bits <= $a){      //新bits大 或 bits相同
 				if ($b == 1){    //新 r
@@ -482,9 +476,11 @@ class ReadyFunc{
 
 						//////////////////////////////////////////////////////////////////////
 						//有效内存 由 寄存器 构建，当寄存器被改写，中断所有操作
-						if (self::break_avoid_mem_usable_reg($obj_reg,$c_normal_register_opt_array[$c_exec_thread_list[$i]])){
-							break;
-						}					
+						if (isset($c_normal_register_opt_array[$c_exec_thread_list[$i]])){
+							if (self::break_avoid_mem_usable_reg($obj_reg,$c_normal_register_opt_array[$c_exec_thread_list[$i]])){
+								break;
+							}
+						}
 						//////////////////////////////////////////////////////////////////////
 						//有任何(除 自身 外) 任何操作 【MEM】则断 -> 写操作
 						if ($opt_permission > 1){
@@ -570,7 +566,7 @@ class ReadyFunc{
 				}elseif ($d === 2){
 					$soul_usable[$sec][$c_exec_thread_list[$c]]['next'][STACK] = false;
 				}elseif ($d === 1){
-					//echo "<br>fuck $a  $c ".$c_exec_thread_list[$c];
+					
 					//var_dump ($soul_usable[$sec][$c_exec_thread_list[$c]]);
 					$soul_usable[$sec][$c_exec_thread_list[$c]]['prev'][STACK] = false;
 					//var_dump ($soul_usable[$sec][$c_exec_thread_list[$c]]);
@@ -621,7 +617,7 @@ class ReadyFunc{
 			$c_valid_mem_opt_tmp = array();// 临时 保存 流程中 有效内存 灵魂 前后 可用记录
 			foreach ($exec_thread_list[$a] as $c => $d){
 				//处理本流程的有效内存
-				if (is_array($valid_mem_opt_array[$a])){
+				if (isset($valid_mem_opt_array[$a])){
 					self::get_execlist_usable_mem($d,$valid_mem_opt_array[$a],$c_valid_mem_opt_tmp[$c],$normal_register_opt_array[$a]);
 				}
 				//
@@ -674,7 +670,7 @@ class ReadyFunc{
 						}
 					}
 					//通用寄存器
-					if (is_array($normal_register_opt_array[$a][$d[$max]])){
+					if (isset($normal_register_opt_array[$a][$d[$max]])){
 						foreach ($normal_register_opt_array[$a][$d[$max]] as $e => $f){
 							if ($e === 'EIP')  //忽略EIP
 								continue;	
@@ -800,7 +796,7 @@ class ReadyFunc{
 				}
 			}
 			//把当前节表 有效内存 可用记录 AND 操作
-			if (is_array($valid_mem_opt_array[$a])){			
+			if (isset($valid_mem_opt_array[$a])){			
 				$c_valid_mem_opt_tmp = self::combine_valid_mem_array($exec_thread_list[$a],$c_valid_mem_opt_tmp);	
 				// 合并 同类
 				$c_valid_mem_opt_tmp = self::merge_same_loc_mem($c_valid_mem_opt_tmp);
@@ -869,22 +865,22 @@ class ReadyFunc{
 	//
 	private static function deal_exec_thread_list_get($c_line,$c_asm_array,$c_thread_id,$c_bound_end,$c_solid_jmp_to,&$exec_thread_list,$list_id,&$c_enumming_array,&$list_id_ptr,&$jmp_back_record,&$bound_start){
 		
-	
-
-
 		while ($c_line < $c_bound_end){
 			if (isset($c_asm_array[$c_line])){
+				$old = array();
+				if (isset($exec_thread_list[$c_thread_id][$list_id])){
+					$old = $exec_thread_list[$c_thread_id][$list_id];
+				}				
 				$exec_thread_list[$c_thread_id][$list_id][] = $c_line;
 
 				if (Instruction::isJmp($c_asm_array[$c_line][OPERATION],1)){ //条件跳转			    
 					$list_id_ptr ++;
 					$exec_thread_list[$c_thread_id][$list_id_ptr] = $exec_thread_list[$c_thread_id][$list_id];
-					$c_enumming_array[$list_id_ptr] = $c_line + 1;		    
-					if ($c_solid_jmp_to[$c_line]){ //有明确跳转 dest
-						if ($c_solid_jmp_to[$c_line] <= $c_line){ //回跳记录
-							if (!isset($jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]])){
-								$jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]] = true;
-							}else{
+					$c_enumming_array[$list_id_ptr] = $c_line + 1;	    
+					if ((isset($c_solid_jmp_to[$c_line]))and($c_solid_jmp_to[$c_line])){ //有明确跳转 dest
+						if ($c_solid_jmp_to[$c_line] <= $c_line){ //回跳记录							
+							if (false !== array_search($c_line,$old)){
+								$exec_thread_list[$c_thread_id][$list_id][] = '-'; //跳转标志
 								return;
 							}
 						}
@@ -892,7 +888,7 @@ class ReadyFunc{
 						$c_line = $c_solid_jmp_to[$c_line];
 						continue;					
 					}else{      //无明确跳转  dest 
-						//echo "<br> fuck $c_thread_id $c_line";
+						// echo "<br> no jmp Dest $c_thread_id $c_line";
 						return;
 					}
 				}
@@ -907,9 +903,8 @@ class ReadyFunc{
 					}
 					if ((isset($c_solid_jmp_to[$c_line])) and ($c_solid_jmp_to[$c_line])){ //有明确跳转 dest
 						if ($c_solid_jmp_to[$c_line] <= $c_line){ //回跳记录
-							if (true !== $jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]]){
-								$jmp_back_record[$c_line][$c_solid_jmp_to[$c_line]] = true;
-							}else{
+							if (false !== array_search($c_line,$old)){
+								$exec_thread_list[$c_thread_id][$list_id][] = '-'; //跳转标志
 								return;
 							}
 						}				
@@ -1075,10 +1070,19 @@ class ReadyFunc{
 							//前缀 对 通用/标志 寄存器的影响//
 							foreach (Instruction::getInstructionOpt($x) as $z => $y){
 								if (Instruction::isEflag($z)){
-									$flag_register_opt_array[$a][$c][$z] |= $y;
+									if (isset($flag_register_opt_array[$a][$c][$z])){
+										$flag_register_opt_array[$a][$c][$z] |= $y;
+									}else{
+										$flag_register_opt_array[$a][$c][$z] = $y;
+									}
 								}elseif (Instruction::getGeneralRegBits($z)){ //32位指令 修改 寄存器都 为32位
 									$cri = Instruction::getGeneralRegIndex($z);
-									$normal_register_opt_array[$a][$c][$cri][32] |= $y;
+									if (isset($normal_register_opt_array[$a][$c][$cri][32])){
+										$normal_register_opt_array[$a][$c][$cri][32] |= $y;
+									}else{
+										$normal_register_opt_array[$a][$c][$cri][32] = $y;
+									}
+									
 								}
 							}
 
@@ -1413,7 +1417,7 @@ class ReadyFunc{
 								break;
 							}
 							$tmp[$f] = UNIQUEHEAD.'SOLID_JMP_'."$i".'_FROM_'."$c"; //Label 号 UNIQUEHEAD."solid_jmp_DEST_from_SOURCE":
-							$solid_jmp_array[$a][$i][] = $tmp[$f].' : ';                 //标号 加个冒号
+							$solid_jmp_array[$a][$i][] = $tmp[$f];
 							$solid_jmp_to[$a][$c] = $i;
 							$AsmResultArray[$a][$c]['asm'] = implode(' ',$tmp);
 							//echo "<br>$<font color=red>$c: ".$AsmResultArray[$a][$c]['asm']."</font>";
@@ -1442,7 +1446,10 @@ class ReadyFunc{
 
 	public static function sec_reloc_format(&$myTables,&$AsmResultArray,&$AsmLastSec,$language,&$LineNum_Code2Reloc,$DebugShow = false){
 
-		$RelocArray       = $myTables['RelocArray'];
+		$RelocArray = NULL;
+		if (isset($myTables['RelocArray'])){
+			$RelocArray = $myTables['RelocArray'];
+		}
 		//根据节表信息对汇编代码分段，结构：[节表编号][在disasm文件位置(总)] = array ('asm' => '汇编代码','bin' => '2进制代码','len' => '代码长度','rva' => '相对节表偏移');
 		//                                            [...]
 		//反编译时以节表开始位 定义了 同步点，这里不再 判断节表开始位是否 一致
@@ -1787,7 +1794,8 @@ class ReadyFunc{
 				}
 			}
 			if (false !== $need){ //末尾也是个split opt
-				if (true === $soul_usable[$sec][$need][N][STACK]){
+				$use_stack = false;
+				if ((isset($soul_usable[$sec][$need][N][STACK]))and(true === $soul_usable[$sec][$need][N][STACK])){
 					$use_stack = true;
 				}
 				unset ($soul_forbid[$sec][$need][N]);
@@ -1862,18 +1870,109 @@ class ReadyFunc{
 			}	
 		}
 	}
+    
+    // 
+	public static function unified_by_DList_key(){
+		global $soul_writein_Dlinked_List_Total;
+		global $soul_forbid; 
+		global $soul_usable;
+		global $StandardAsmResultArray;
+		global $exec_thread_list;
+		global $solid_jmp_array;
+		global $solid_jmp_to;
+		global $normal_register_opt_array;
+		global $flag_register_opt_array;
+		global $valid_mem_opt_array;
+
+		$tmp_soul_writein_Dlinked_List_Total = $soul_writein_Dlinked_List_Total;
+		$tmp_StandardAsmResultArray = $StandardAsmResultArray;
+		$StandardAsmResultArray = array();
+		$tmp_soul_forbid = $soul_forbid;
+		$soul_forbid = array();
+		$tmp_soul_usable = $soul_usable;
+		$soul_usable = array();
+		$tmp_exec_thread_list = $exec_thread_list;
+		$exec_thread_list = array();
+		$tmp_solid_jmp_array = $solid_jmp_array;
+		$solid_jmp_array = array();
+		$tmp_solid_jmp_to = $solid_jmp_to;
+		$solid_jmp_to = array();
+		$tmp_normal_register_opt_array = $normal_register_opt_array;
+		$normal_register_opt_array = array();
+		$tmp_flag_register_opt_array = $flag_register_opt_array;
+		$flag_register_opt_array = array();
+		$tmp_valid_mem_opt_array = $valid_mem_opt_array;
+		$valid_mem_opt_array = array();
+
+		foreach ($tmp_soul_writein_Dlinked_List_Total as $sec => $z){
+			$tmp_map = array(); // trans map
+			foreach ($z as $key => $value){				
+				$tmp_map[$value[C]] = $key;
+				$soul_key = $value[C];
+				unset($soul_writein_Dlinked_List_Total[$sec][$key][C]);
+				if (isset($soul_writein_Dlinked_List_Total[$sec][$key][LABEL])){
+					$StandardAsmResultArray[$sec][$key][LABEL] = $soul_writein_Dlinked_List_Total[$sec][$key][LABEL];
+					unset($soul_writein_Dlinked_List_Total[$sec][$key][LABEL]);
+				}elseif (isset($tmp_StandardAsmResultArray[$sec][$soul_key])){
+					$StandardAsmResultArray[$sec][$key] = $tmp_StandardAsmResultArray[$sec][$soul_key];
+				}				
+				if (isset($tmp_soul_forbid[$sec][$soul_key])){
+					$soul_forbid[$sec][$key] = $tmp_soul_forbid[$sec][$soul_key];
+				}
+				if (isset($tmp_soul_usable[$sec][$soul_key])){
+					$soul_usable[$sec][$key] = $tmp_soul_usable[$sec][$soul_key];
+				}
+				if (isset($tmp_solid_jmp_array[$sec][$soul_key])){
+					$solid_jmp_array[$sec][$key] = $tmp_solid_jmp_array[$sec][$soul_key];
+				}
+				if (isset($tmp_normal_register_opt_array[$sec][$soul_key])){
+					$normal_register_opt_array[$sec][$key] = $tmp_normal_register_opt_array[$sec][$soul_key];
+				}
+				if (isset($tmp_flag_register_opt_array[$sec][$soul_key])){
+					$flag_register_opt_array[$sec][$key] = $tmp_flag_register_opt_array[$sec][$soul_key];
+				}
+				if (isset($tmp_valid_mem_opt_array[$sec][$soul_key])){
+					$valid_mem_opt_array[$sec][$key] = $tmp_valid_mem_opt_array[$sec][$soul_key];
+				}
+			}
+			foreach ($tmp_exec_thread_list[$sec] as $list_num => $z){
+				foreach ($z as $tmp){
+					if (isset($tmp_map[$tmp])){
+						$tmp = $tmp_map[$tmp];
+					}//else{'-' == $tmp}
+					$exec_thread_list[$sec][$list_num][] = $tmp;
+				}				
+			}
+			if (isset($tmp_solid_jmp_to[$sec])){
+				foreach ($tmp_solid_jmp_to[$sec] as $a => $b){
+					if ((isset($tmp_map[$a])) and (isset($tmp_map[$b]))){
+						$a = $tmp_map[$a];
+						$b = $tmp_map[$b];
+						$solid_jmp_to[$sec][$a] = $b;
+					}else{
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
 
 
 	////////////////////////////////////////////////////////////////////////////////
 	//生成 $soul_writein_Dlinked_List 代码顺序 双向 链表
 	//
-	public static function add_soul_writein_Dlinked_List(&$soul_writein_Dlinked_List,&$num,&$prev,$label,$asm,$ia = false){
+	public static function add_soul_writein_Dlinked_List(&$soul_writein_Dlinked_List,&$soul_len_array,&$num,&$prev,$label,$asm,$ia = false){
 		global $label_index;
 		global $sec;
 		global $soul_usable;
 		global $soul_forbid;
 
 		global $AsmResultArray;
+		global $StandardAsmResultArray;
+
+		$soul_writein_Dlinked_List[$num][P] = false;
+		$soul_writein_Dlinked_List[$num][N] = false;
 
 		if (false !== $prev){
 			$soul_writein_Dlinked_List[$num][P]  = $prev;
@@ -1881,7 +1980,6 @@ class ReadyFunc{
 		}
 		if (false !== $label){
 			$soul_writein_Dlinked_List[$num][LABEL] = $label;
-			//$soul_writein_Dlinked_List[$num]['ipsp'] = true; //label 默认影响ipsp，无需设置
 			if (true === $ia){ 
 				if (isset($soul_usable[$sec][$asm][N])){ //(继承 目标 指令的 next_usable)
 					$soul_usable[$sec][$label_index][P] = $soul_usable[$sec][$asm][N];		
@@ -1902,36 +2000,36 @@ class ReadyFunc{
 				}
 			}
 			$soul_writein_Dlinked_List[$num][C] = $label_index;
-			$soul_writein_Dlinked_List[$num]['len'] = 0; //标号长度为0 byte
+			$soul_len_array[$sec][$num] = 0;
 			$label_index --;
 		}else{
-			global $c_Asm_Result;
-			global $p_sec_abs;
-
-			if (isset($p_sec_abs[$asm])){ //保护段，默认为 ip/sp
-				$soul_writein_Dlinked_List[$num]['ipsp'] = true;
-			}elseif (GeneralFunc::is_effect_ipsp($c_Asm_Result[$asm])){ //识别指令 是否影响 IP/SP
-				$soul_writein_Dlinked_List[$num]['ipsp'] = true;
-			}
+			// global $p_sec_abs;
+			// if (isset($p_sec_abs[$asm])){ //保护段，默认为 ip/sp
+			// 	$soul_writein_Dlinked_List[$num]['ipsp'] = true;
+			// }else{
+			// 	$c_asm = $StandardAsmResultArray[$sec][$asm];				
+			// 	if (GeneralFunc::is_effect_ipsp($c_asm)){ //识别指令 是否影响 IP/SP
+			// 		$soul_writein_Dlinked_List[$num]['ipsp'] = true;
+			// 	}
+			// }
 
 			$soul_writein_Dlinked_List[$num][C] = $asm;
-			
-			$soul_writein_Dlinked_List[$num]['len'] = intval(strlen($AsmResultArray[$sec][$asm]['bin'])/2);		
+			$soul_len_array[$sec][$num] = $AsmResultArray[$sec][$asm]['len'];			
 		}
 		
 		$prev = $num;
 		$num ++;
 	}
 
-	public static function generat_soul_writein_Dlinked_List(&$soul_writein_Dlinked_List,$a,$b,&$num,&$prev,$c_solid_jmp_array){	
+	public static function generat_soul_writein_Dlinked_List(&$soul_writein_Dlinked_List,&$soul_len_array,$a,&$num,&$prev,$c_solid_jmp_array){
 
 		if (isset($c_solid_jmp_array[$a])){ //标号
 			foreach ($c_solid_jmp_array[$a] as $z => $y){
-				self::add_soul_writein_Dlinked_List($soul_writein_Dlinked_List,$num,$prev,$y,$a);				
+				self::add_soul_writein_Dlinked_List($soul_writein_Dlinked_List,$soul_len_array,$num,$prev,$y,$a);				
 			}
 		}	
 		
-		self::add_soul_writein_Dlinked_List($soul_writein_Dlinked_List,$num,$prev,false,$a);
+		self::add_soul_writein_Dlinked_List($soul_writein_Dlinked_List,$soul_len_array,$num,$prev,false,$a);
 
 		return;
 	}

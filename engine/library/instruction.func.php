@@ -15,7 +15,8 @@ class Instruction{
 
 	//*** 其它数组
 	private static $_mem_effect_len_array;
-	private static $_cant_deal_inst;         //目前无法处理指令
+	private static $_cant_deal_inst;         //目前无法处理指令(已知)
+	private static $_stack_effects;
 	private static $_range_limit_static_jmp; 
 	private static $_cc_insts;
 	private static $_jcc_without_limit;
@@ -27,10 +28,10 @@ class Instruction{
 
 	private static $_pattern_regs; //全 通用寄存器 匹配
    
-    //*** 指令集
+    // *** 指令集
 	private static $_instruction;
 
-    //创建 所有通用寄存器 通配字符串
+    // 创建 所有通用寄存器 通配字符串
 	private static function genRegPattern(){
 		$ret = "";
 	    foreach (self::$_register_total as $a => $b){
@@ -82,6 +83,7 @@ class Instruction{
 		self::$_mem_opt                = $mem_opt;
 		self::$_alias_inst             = $inst_alias;
 		self::$_bits                   = $bits_array;
+		self::$_stack_effects          = $stack_effects;
 
 		//***
 		require dirname(__FILE__)."/../instructions/intl.inc.php";
@@ -91,7 +93,7 @@ class Instruction{
 		self::$_pattern_regs = self::genRegPattern();
 	}
 
-	//位数统计
+	// 位数统计
 	// $dir: 1 : 大于等于 $bits 的所有位
 	public static function getBitsArray($bits=0,$dir=1){
 		if (9 >= $bits){ // 8,9 是 16位 的 高低表示
@@ -106,15 +108,15 @@ class Instruction{
 		return $ret;
 	}
 
-    //是否是prefix
+    // 是否是prefix
 	public static function isPrefixInst($inst){
 	    return (isset(self::$_instruction[$inst]['isPrefix']));
 	}
-    //是否是数据定义指令
+    // 是否是数据定义指令
 	public static function isDataInst($inst){
 	    return (isset(self::$_instruction[$inst]['data']));
 	}
-	//获取指令 数组 / $par 忽略参数个数 (肯定此inst无多参，如prefix;数据定义 或 仅需判断inst是否有效)
+	// 获取指令 数组 / $par 忽略参数个数 (肯定此inst无多参，如prefix;数据定义 或 仅需判断inst是否有效)
 	public static function getInstructionOpt($inst,$par=false){
 		$ret = false;
 	    if (isset(self::$_instruction[$inst])){
@@ -131,7 +133,7 @@ class Instruction{
 		return $ret;
 	}
     
-	//返回 opt 涉及写操作 的 通用(标志)寄存器 数组 $ret[FLAG]   = array('','')
+	// 返回 opt 涉及写操作 的 通用(标志)寄存器 数组 $ret[FLAG]   = array('','')
 	//                                             $ret[NORMAL] = array('','') #不区分bits
 	//                                             $ret[STACK]  = 
 	public static function getRegWriteArrayByOpt($inst,$param_num){
@@ -170,7 +172,7 @@ class Instruction{
 		return $ret;		
 	}
 
-	//获取内存地址中的通用寄存器
+	// 获取内存地址中的通用寄存器
 	public static function getRegInMem($mem){
 		$ret = array();
 		if (preg_match_all('/'.self::$_pattern_regs.'/',$mem,$tmp)){
@@ -179,12 +181,69 @@ class Instruction{
 		return $ret;	    
 	}
 
+	// 指令对栈的影响(读|写) 0 不影响 | true 影响(但未知) | != 0 影响字节数(byte)
+	// 注：不完整，仅为stack balance功能 服务，见array.intl.inc.php[$stack_effects数组]
+	public static function stackEffectBytes($asm){
+		if (isset($asm[LABEL])){
+			return 0;
+		}
+		if (isset(self::$_stack_effects[$asm[OPERATION]])){
+			$sign  = self::$_stack_effects[$asm[OPERATION]][0];
+			$value = self::$_stack_effects[$asm[OPERATION]][1];
+			if (STACK_EFFECT_1 === $value){
+				$value = OPT_BITS / DWORD_BITS;
+				if (isset($asm[P_TYPE][0])){
+					if (('r' === $asm[P_TYPE][0]) or ('m' === $asm[P_TYPE][0])){
+						$value = $asm[P_BITS][0] / DWORD_BITS;
+					}
+				}
+			}
+			return  $sign*$value ;
+		}
+		$param_num = 0;
+		if (isset($asm[PARAMS])){
+			$param_num = count($asm[PARAMS]);
+		}
 
-	//获取指令别名(如果有的话)
+		$inst = self::getInstructionOpt($asm[OPERATION],$param_num);
+		if (isset($inst[STACK])){
+			return true;
+		}
+		if ((isset($asm[PARAMS]))and(count($asm[PARAMS]) > 0)){
+			foreach ($asm[P_TYPE] as $i => $type){
+				if ('r' === $type){
+					if (STACK_POINTER_REG === Instruction::getGeneralRegIndex($asm[PARAMS][$i])){
+						return true;
+					}
+				}elseif ('m' == $type){
+					if (isset($asm[P_M_REG][$i][STACK_POINTER_REG])){
+						return true;
+					}
+				}
+			}
+		}
+		return 0;
+	}
+
+	public static function isStackEffect($inst){
+		if (isset(self::$_instruction[$inst][STACK])){
+			return true;
+		}
+		if (isset(self::$_instruction[$inst]['multi_op'])){
+			foreach (self::$_instruction[$inst] as $v){
+				if (isset($v[STACK])){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	// 获取指令别名(如果有的话)
 	public static function getInstAlias($inst){
 	    return (isset(self::$_alias_inst[$inst]))?self::$_alias_inst[$inst]:$inst;
 	}
-    //内存操作 指令
+    // 内存操作 指令
 	public static function getMemOpt($inst){
 		return (isset(self::$_mem_opt[$inst]))?(self::$_mem_opt[$inst]):false;
 	}
@@ -206,7 +265,7 @@ class Instruction{
 	}
 
 	public static function randUnLmtJcc(){
-		return self::$_jcc_without_limit[array_rand(self::$_jcc_without_limit)];
+		return self::$_jcc_without_limit[GeneralFunc::my_array_rand(self::$_jcc_without_limit)];
 	}
 
     public static function isMatchCC($cc,$inst){
@@ -220,8 +279,9 @@ class Instruction{
     public static function isJmpStatic($inst){
 	    return (isset(self::$_range_limit_static_jmp[$inst]));
 	}
+
     public static function getJmpRangeLmt($inst){
-	    return self::$_range_limit_static_jmp[$inst];
+	    return (isset(self::$_range_limit_static_jmp[$inst]))?self::$_range_limit_static_jmp[$inst]:0;
 	}
 
 	public static function isCantDealInst($inst){
@@ -265,7 +325,7 @@ class Instruction{
 			}
 		}
 		if (!empty($r)){
-			return array_rand($r);
+			return GeneralFunc::my_array_rand($r);
 		}else{
 			return false;
 		}
