@@ -7,6 +7,13 @@ an Obfuscation Engine for binary code
 
 unest obfuscate the binary code,obstruct malicious software analysis effectively.
 
+##Executive Enviroment
+
+```
+php + nasm
+
+```
+
 ##Support
 
 ```
