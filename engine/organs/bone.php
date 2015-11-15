@@ -534,6 +534,8 @@ class OrganBone{
 	}
 
 	public static function start($bone_obj){
+		var_dump($bone_obj);
+		exit;
 
 		self::$_delay_remove         = array();
 		self::$_bone_units           = array();

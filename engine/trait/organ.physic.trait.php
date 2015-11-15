@@ -1,7 +1,7 @@
 <?php
 
-class OrgansOperator{
-
+// organ physic required in organ.wrapper.func.php
+trait tOrganPhysic{
 	private static $_unit_begin_index;
 	private static $_unit_insert_index;
 
@@ -14,17 +14,27 @@ class OrgansOperator{
 	private static $_unit_inst_len;
 	private static $_unit_ipsp;
 	private static $_unit_comment;
-	private static $_GPR_effects; // general purpose register
 
-	private static $_rel_jmp_dst;
-	private static $_rel_jmp_range;
-	private static $_rel_jmp_max;
-	private static $_rel_jmp_units;
-	private static $_rel_jmp_pos_effects;
-	private static $_rel_jmp_label;
-	private static $_rel_jmp_expired; // wait to reset
+	protected static $_GPR_effects; // general purpose register
+	protected static $_MEM_effects;
+	protected static $_EFLAGS_effects;
+	protected static $_STACK_effects;
+	protected static $_SP_writes;
 
-	private static $_sec;
+	protected static $_rel_jmp_dst;
+	protected static $_rel_jmp_range;
+	protected static $_rel_jmp_max;
+	protected static $_rel_jmp_units;
+	protected static $_rel_jmp_pos_effects;
+	protected static $_rel_jmp_label;
+	protected static $_rel_jmp_expired; // wait to re-set	
+	protected static $_rel_jmp_range_expired; // wait to re-getlen
+
+	protected static $_mem_operand_map; // mem operands map
+	protected static $_reloc_map;       // reloc value map
+
+
+	// private static $_sec;
 
 	// independent data (without rollback)
 	private static $_data4rollback;
@@ -32,14 +42,15 @@ class OrgansOperator{
 	private static $_stack_points_array;
 	private static $_stack_points_index_array;
 
-	// const
-	const FAIL_MATCH_LABEL = -1;
-	const FAIL_GET_UNITS   = -2;
-	const FAIL_OVER_RANGE  = -3;
 
-	// Export & Import
-	public static function export(){
-		return serialize(array(
+	// const
+	private static $_FAIL_MATCH_LABEL = -1;
+	private static $_FAIL_GET_UNITS   = -2;
+	private static $_FAIL_OVER_RANGE  = -3;
+    
+    //
+    public static function Physic_export(){
+    	return array(
 			self::$_unit_begin_index,
 			self::$_unit_insert_index,
 			self::$_unit_dlist,
@@ -49,6 +60,10 @@ class OrgansOperator{
 			self::$_unit_fat,
 			self::$_unit_inst_len,
 			self::$_GPR_effects,
+			self::$_MEM_effects,
+	        self::$_EFLAGS_effects,
+	        self::$_STACK_effects,
+			self::$_SP_writes,
 			self::$_unit_ipsp,
 			self::$_unit_comment,
 			self::$_rel_jmp_dst,
@@ -57,37 +72,55 @@ class OrgansOperator{
 			self::$_rel_jmp_units,
 			self::$_rel_jmp_pos_effects,
 			self::$_rel_jmp_label,
-			self::$_sec,
+			// self::$_sec,
 			self::$_rel_jmp_expired,
-		));		
+			self::$_rel_jmp_range_expired,
+			self::$_mem_operand_map,
+			self::$_reloc_map,
+		);
+    }
+    public static function Physic_import($src){
+    	self::flush4Rollback();
+		self::$_unit_begin_index      = $src[0];
+		self::$_unit_insert_index     = $src[1];
+		self::$_unit_dlist            = $src[2];
+		self::$_unit_inst             = $src[3];
+		self::$_unit_usable           = $src[4];
+		self::$_unit_forbid           = $src[5];
+		self::$_unit_fat              = $src[6];
+		self::$_unit_inst_len         = $src[7];
+		self::$_GPR_effects           = $src[8];
+		self::$_MEM_effects           = $src[9];
+        self::$_EFLAGS_effects        = $src[10];
+        self::$_STACK_effects         = $src[11];
+		self::$_SP_writes             = $src[12];
+		self::$_unit_ipsp             = $src[13];
+		self::$_unit_comment          = $src[14];
+		self::$_rel_jmp_dst           = $src[15];
+		self::$_rel_jmp_range         = $src[16];
+		self::$_rel_jmp_max           = $src[17];
+		self::$_rel_jmp_units         = $src[18];
+		self::$_rel_jmp_pos_effects   = $src[19];
+		self::$_rel_jmp_label         = $src[20];
+		self::$_rel_jmp_expired       = $src[21];
+		self::$_rel_jmp_range_expired = $src[22];
+		self::$_mem_operand_map       = $src[23];
+		self::$_reloc_map             = $src[24];
+    }
+    // TODO : Deprecated
+	// Export & Import
+	public static function export(){
+		return serialize(self::Physic_export());		
 	}
-	public static function import($str){
-		self::flush4Rollback();
+	// TODO : Deprecated
+	public static function import($str){		
 		$tmp = unserialize($str);
-		self::$_unit_begin_index = $tmp[0];
-		self::$_unit_insert_index = $tmp[1];
-		self::$_unit_dlist = $tmp[2];
-		self::$_unit_inst = $tmp[3];
-		self::$_unit_usable = $tmp[4];
-		self::$_unit_forbid = $tmp[5];
-		self::$_unit_fat = $tmp[6];
-		self::$_unit_inst_len = $tmp[7];
-		self::$_GPR_effects  = $tmp[8];
-		self::$_unit_ipsp    = $tmp[9];
-		self::$_unit_comment = $tmp[10];
-		self::$_rel_jmp_dst  = $tmp[11];
-		self::$_rel_jmp_range = $tmp[12];
-		self::$_rel_jmp_max = $tmp[13];
-		self::$_rel_jmp_units = $tmp[14];
-		self::$_rel_jmp_pos_effects = $tmp[15];
-		self::$_rel_jmp_label = $tmp[16];
-		self::$_sec = $tmp[17];
-		self::$_rel_jmp_expired = $tmp[18];
+		return self::Physic_import($tmp);
 	}
 	// flush for RollBack
 	private static function flush4Rollback(){
 		self::$_unit_begin_index = 0;
-		self::$_unit_insert_index = 0;
+		self::$_unit_insert_index = 1;
 		self::$_unit_dlist  = array();
 
 		self::$_unit_inst   = array();
@@ -96,6 +129,10 @@ class OrgansOperator{
 		self::$_unit_fat    = array();
 		self::$_unit_inst_len = array();
 		self::$_GPR_effects  = array();
+		self::$_MEM_effects  = array();
+        self::$_EFLAGS_effects = array();
+        self::$_STACK_effects = array();
+        self::$_SP_writes    = array();
 		self::$_unit_ipsp    = array();
 		self::$_unit_comment = array();
 		self::$_rel_jmp_dst = array();
@@ -106,10 +143,14 @@ class OrgansOperator{
 		self::$_rel_jmp_label = array();
 
 		self::$_rel_jmp_expired = array();
+		self::$_rel_jmp_range_expired = array();
 
-	    self::$_sec = 0;
-        
-        self::$_data4rollback = NULL;
+		self::$_mem_operand_map = array();
+		self::$_reloc_map       = array();
+
+	    // self::$_sec = 0;
+	    
+	    self::$_data4rollback = NULL;
 	}	
 	// flush all 
 	private static function flushAll(){
@@ -119,11 +160,11 @@ class OrgansOperator{
 		self::$_stack_points_array = array();
 		self::$_stack_points_index_array = array();
 	}
-    // init
-    public static function init($sec,$sl_dlist,$sl_inst,$sl_usable,$sl_forbid,$sl_len,$sl_GPR_effects){
-    	self::flushAll();
+	// init
+	public static function init($sl_dlist,$sl_inst,$sl_usable,$sl_forbid,$sl_len,$sl_GPR_effects){
+		self::flushAll();
 
-        self::$_unit_inst     = $sl_inst;       
+	    self::$_unit_inst     = $sl_inst;       
 		self::$_unit_usable   = $sl_usable;
 		self::$_unit_forbid   = $sl_forbid;
 		self::$_unit_inst_len = $sl_len;
@@ -133,7 +174,7 @@ class OrgansOperator{
 		self::$_unit_begin_index = DEFAULT_DLIST_FIRST_NUM;
 		self::$_unit_insert_index = 1 + max(array_keys(self::$_unit_inst));
 
-		self::$_sec = $sec;
+		// self::$_sec = $sec;
 
 		// init comments
 		$c = self::getBeginUnit();
@@ -141,7 +182,6 @@ class OrgansOperator{
 			self::appendComment($c,'s'.$c);
 			$c = self::next($c);
 		}
-
 	}
 	private static function cloneLabel($id){
 		$idx = self::newUnitByClone($id,$id);
@@ -152,7 +192,7 @@ class OrgansOperator{
 		}		
 		return $idx;
 	}
-    // ready & start rollback
+	// ready & start rollback
 	public static function ready(){
 		self::$_data4rollback = self::export();
 	}
@@ -258,20 +298,57 @@ class OrgansOperator{
 			$ret = '';
 		}
 		return $ret;
-	}	
-	// get method(s)
+	}
+	public static function getMemOperandArr($mid){
+		return isset(self::$_mem_operand_map[$mid])?self::$_mem_operand_map[$mid]:false;
+	}
 	public static function getBeginUnit(){
 		return self::$_unit_begin_index;
 	}
 	public static function getCode($id){
 		return isset(self::$_unit_inst[$id])?self::$_unit_inst[$id]:false;
 	}
-	public static function getLen($id){ // TODO: 跳转指令range改变会改变指令长度
-		if (self::isValidUnit($id)){
-			if (!isset(self::$_unit_inst_len[$id])){
-				$c_len = OpLen::code_len(self::getCode($id),false,self::getRelJmpRange($id));
-				self::$_unit_inst_len[$id] = $c_len;
+	private static function getCurrentMemArr($id){
+		$ret = false;
+		if (isset(self::$_unit_inst[$id][P_TYPE])){
+			$pid = array_search(T_MEM, self::$_unit_inst[$id][P_TYPE]);
+			if (false !== $pid){
+				$ret = self::getMemOperandArr(self::$_unit_inst[$id][OPERAND][$pid]);
 			}
+		}
+		if (false === $ret){$ret = array();}
+		return $ret;
+	}
+	protected static function getLen($id,$forced=false){
+		if (self::isValidUnit($id)){
+			if (($forced) or (!isset(self::$_unit_inst_len[$id]))){
+				$c_inst = self::getCode($id);
+				$c_len = 0;
+				// echo '<br>+++++++++++++++++++++++++++++++++ '.$id.'<br>';
+				// var_dump($c_inst);
+				if (isset($c_inst[VIRT_UNIT])){
+					$c_len = 0;
+				}else{
+					$extend = array();
+					$c_p_m_reg = self::getCurrentMemArr($id);
+					$c_vec_range = isset(self::$_rel_jmp_range[$id])?self::$_rel_jmp_range[$id]:0;
+					$c_reverse_jmp = self::isReverseJmp($id); // 反跳
+					$predictLenArray = PredictInstLen::predictInstLength($c_inst,$c_p_m_reg,$c_vec_range,$c_reverse_jmp,$extend);
+					if (!empty($extend)){
+						self::$_unit_inst[$id] += $extend;
+					}
+					// var_dump($predictLenArray);
+					if (false === $predictLenArray){
+						// GeneralFunc::LogInsert('inst length predicted fail, id: '.$id.', ['.$c_inst[INST].']', WARNING);
+						$c_len = SINGLE_INST_MAX;
+					}else{					
+						foreach ($predictLenArray as $v){
+							$c_len += $v;
+						}					
+					}
+				}
+				self::setInstLength($id,$c_len);						
+			}			
 			return self::$_unit_inst_len[$id];
 		}
 		return 0;
@@ -348,6 +425,9 @@ class OrgansOperator{
 		}
 		return $size;
 	}
+	public static function getRelocArr($id){
+		return isset(self::$_reloc_map[$id])?self::$_reloc_map[$id]:false;
+	}
 	private static function getAmongUnitsBySort($first,$last){
 		$units = array();
 		$c = $first;
@@ -371,8 +451,49 @@ class OrgansOperator{
 		}
 		return false;
 	}
-
+	protected static function getComment($id){
+		return isset(self::$_unit_comment[$id])?self::$_unit_comment[$id]:'';
+	}
 	// set method(s)
+	private static function setEffectsJmpRangeExpired($id){
+		$tmp = array();
+		if (isset(self::$_rel_jmp_pos_effects[$id][P])){
+			$tmp = self::$_rel_jmp_pos_effects[$id][P];
+		}
+		if (isset(self::$_rel_jmp_pos_effects[$id][N])){
+			$tmp = array_merge($tmp,self::$_rel_jmp_pos_effects[$id][N]);
+		}		
+		if (!empty($tmp)){
+			$tmp = array_unique($tmp);	
+			foreach ($tmp as $c){
+				if (in_array($id, self::$_rel_jmp_units[$c])){
+					self::$_rel_jmp_range_expired[$c] = $c;
+				}
+			}
+		}		
+	}
+	private static function setComment($id,$comment){
+		$c = '';
+		if (isset($comment[1])){
+			$c = self::getComment($comment[1]);
+		}
+		if (isset($comment[0])){
+			$c .= $comment[0].';';
+		}
+		self::$_unit_comment[$id] = $c;
+	}
+	private static function setInstLength($id,$len){
+		$changed = false;
+		if ((isset(self::$_unit_inst_len[$id])) and (self::$_unit_inst_len[$id] != $len)){
+		 	$changed = true;
+		 	echo "<br>inst[".$id."] length changed:".self::$_unit_inst_len[$id].' -> '.$len;
+		}
+		self::$_unit_inst_len[$id] = $len;
+		if ($changed){
+		 	self::setEffectsJmpRangeExpired($id);
+		 	var_dump(self::$_rel_jmp_range_expired);
+		}
+	}
 	public static function setStackPattern($c_stack_pointer_define){
 		self::$_stack_points_pattern = false;
 		if (is_array($c_stack_pointer_define)){
@@ -398,13 +519,14 @@ class OrgansOperator{
 		self::$_unit_usable[$id][P][STACK] = true;
 		self::$_unit_usable[$id][N][STACK] = true;
 	}	
-	public static function setGPReffects($id,$reg,$bits,$perm){
-		if (isset(self::$_GPR_effects[$id][$reg][$bits])){
-			self::$_GPR_effects[$id][$reg][$bits] |= $perm;
-		}else{
-			self::$_GPR_effects[$id][$reg][$bits] = $perm;
-		}		
-	}
+	// TODO: delete
+	// public static function setGPReffects($id,$reg,$bits,$perm){
+	// 	if (isset(self::$_GPR_effects[$id][$reg][$bits])){
+	// 		self::$_GPR_effects[$id][$reg][$bits] |= $perm;
+	// 	}else{
+	// 		self::$_GPR_effects[$id][$reg][$bits] = $perm;
+	// 	}		
+	// }
 	// 在$id指令后'伪'分配$size,检测limited jcc是否会over range, 注:resetRelJmp后失效
 	public static function setPseudoAlloc($id,$dir,$size){
 		if ((!empty(self::$_rel_jmp_max)) and (!empty(self::$_rel_jmp_pos_effects[$id][$dir]))){
@@ -496,12 +618,11 @@ class OrgansOperator{
 		self::allRelJmpExpired(); // TODO: diversify
 		return self::reDlink($prev,$next);
 	}
-	public static function removeDLink($id){
+	protected static function removeDLink($id){
 		if (self::isValidUnit($id)){
 			self::reDlink(self::prev($id),self::next($id));
 			self::setRelJmpExpired($id,P);
-			self::setRelJmpExpired($id,N);
-			Character::removeRate($id); //清character.Rate
+			self::setRelJmpExpired($id,N);			
 			// label ? set $_rel_jmp_dst = false
 			if (self::getLabel($id)){
 				if ($rid = array_search($id, self::$_rel_jmp_dst)){
@@ -583,6 +704,21 @@ class OrgansOperator{
 		}
 		return false;
 	}
+	// 栈指针寄存器写操作 判断
+	protected static function isWriteEsp($id){
+		if (isset(self::$_GPR_effects[$id]['ESP'])){
+			if (in_array(W,self::$_GPR_effects[$id]['ESP'])){
+				return true;
+			}
+			if (in_array(R|W,self::$_GPR_effects[$id]['ESP'])){
+				return true;
+			}
+		}
+		return false;
+	}
+	protected static function isIndependWriteSp($id){
+		return isset(self::$_SP_writes[$id])?self::$_SP_writes[$id]:false;
+	}
 	public static function initIpsp(){
 		$id = self::getBeginUnit();
 		while ($id){
@@ -605,44 +741,35 @@ class OrgansOperator{
 					return false;
 				}else{
 					self::$_unit_inst[$idx][REL][$c_number][C] = $new;
-			 		self::$_unit_inst[$idx][PARAMS][$c_number] = str_replace(UNIQUEHEAD.'RELINFO_'.self::$_sec.'_'.$old_rel_i.'_'.$old_rel_c,UNIQUEHEAD.'RELINFO_'.self::$_sec.'_'.$old_rel_i.'_'.$new,self::$_unit_inst[$idx][PARAMS][$c_number]); 		
+			 		// self::$_unit_inst[$idx][PARAMS][$c_number] = str_replace(UNIQUEHEAD.'RELINFO_'.self::$_sec.'_'.$old_rel_i.'_'.$old_rel_c,UNIQUEHEAD.'RELINFO_'.self::$_sec.'_'.$old_rel_i.'_'.$new,self::$_unit_inst[$idx][PARAMS][$c_number]); 		
 			 	}
 			}
 		}
 		return true;
 	}
-	// init single units' general purpose register effects
-	// TODO
-	// private static function initGPReffects($id,$inst_array){
-	// 	if (isset($inst_array[PREFIX])){
-	// 		foreach ($inst_array[PREFIX] as $a){
-	// 			Instruction::getInstructionOpt($a);
-	// 		}
-	// 	}
-	// 	// if (isset($inst_array[OPERATION])){
 
-	// 	// }
-	// 	// if (isset())
-
-	// 	// self::$_GPR_effects[$id][reg][bits] = 1|2|3
-	// }
-
+	private static function isReverseJmp($id){
+		if (isset(self::$_rel_jmp_range[$id])){ // include self is reverse JMP
+			return in_array($id,self::$_rel_jmp_units[$id]);
+		}
+		return false;
+	}
 	public static function removeUsableMemByStack($id){
 		GenerateFunc::doFilterMemUsable(self::$_unit_usable[$id][P][MEM_OPT_ABLE]);
 		GenerateFunc::doFilterMemUsable(self::$_unit_usable[$id][N][MEM_OPT_ABLE]);
 	}
-	public static function isUsableStack($id,$dir){
-		if (isset(self::$_unit_usable[$id][$dir][STACK])){
-			return self::$_unit_usable[$id][$dir][STACK];
-		}
-		return false;
-	}
-	public static function isUsableStackbyUnit($id){ // 判断单位是否栈可用
-		if ((self::isUsableStack($id,P)) or (self::isUsableStack($id,N))){
-			return true;
-		}
-		return false;
-	}
+	// public static function isUsableStack($id,$dir){
+	// 	if (isset(self::$_unit_usable[$id][$dir][STACK])){
+	// 		return self::$_unit_usable[$id][$dir][STACK];
+	// 	}
+	// 	return false;
+	// }
+	// public static function isUsableStackbyUnit($id){ // 判断单位是否栈可用
+	// 	if ((self::isUsableStack($id,P)) or (self::isUsableStack($id,N))){
+	// 		return true;
+	// 	}
+	// 	return false;
+	// }
 	public static function isValidUnit($id){
 		if (!$id){return false;}
 		return isset(self::$_unit_dlist[$id])?true:false;
@@ -669,7 +796,18 @@ class OrgansOperator{
 	}
 	private static function isSentinelUnit($id){
 		return (false === $id)?true:false;
-	}	
+	}
+	public static function isVirtUnit($id){
+		return ((isset(self::$_unit_inst[$id])) and (isset(self::$_unit_inst[$id][VIRT_UNIT])));
+	}
+	private static function isSpGpr($gpr){
+		if ($gprIdx = Instruction::getGeneralRegIndex($gpr)){
+			if ($gprIdx === STACK_POINTER_REG){
+				return true;
+			}
+		}
+		return false;
+	}
 	// 前(后)是否可插入脂肪(fat)
 	// params:  $unit  :  DList's unit
 	// 			$direct:  1 prev   2 next
@@ -736,18 +874,33 @@ class OrgansOperator{
 		}
 		return true;
 	}
-	private static function resetRelJmpExpired(){
+	protected static function resetRelJmpExpired(){		
 		if ((!empty(self::$_rel_jmp_expired)) and (!empty(self::$_rel_jmp_dst))){
 			$objs = array_intersect(self::$_rel_jmp_expired,array_keys(self::$_rel_jmp_dst));
-			foreach ($objs as $id){
+			foreach ($objs as $id){				
+				unset(self::$_rel_jmp_expired[$id]);
 				if (true !== ($errcode = self::resetRelJmp($id))){
 					GeneralFunc::LogInsert('fail to resetRelJmp() called by resetRelJmpExpired, id:'.$id.', errcode:'.$errcode,NOTICE);
 					return false;
-				}else{
-					unset(self::$_rel_jmp_expired[$id]);
 				}
 			}
-		}		
+		}
+		return true;
+	}
+	protected static function resetRelJmpRangeExpired(){
+		while (!empty(self::$_rel_jmp_range_expired)){
+			echo '<br>self::$_rel_jmp_range_expired:';
+			var_dump(self::$_rel_jmp_range_expired);
+			$tmp = self::$_rel_jmp_range_expired;
+			foreach ($tmp as $a){
+				$b = self::resetControlTransferInstLenAfterRangeChanged($a);
+				if (true !== $b){
+					return $b;
+				}else{
+					unset(self::$_rel_jmp_range_expired[$a]);
+				}
+			}
+		}
 		return true;
 	}
 	private static function removeRelJmpPosEffectsDo($uid,$id){
@@ -810,18 +963,17 @@ class OrgansOperator{
 		return true;
 	}
 	private static function resetRelJmp($id){
-		self::removeRelJmpPosEffects($id); // remove all $_rel_jmp_pos_effects of $id
-		self::removeLen($id); // any changed will effect jcc inst length
-		if (!self::$_rel_jmp_dst[$id]){ // seek the match Label
+		self::removeRelJmpPosEffects($id); // remove all $_rel_jmp_pos_effects of $id		
+		if (!self::$_rel_jmp_dst[$id]){    // seek the match Label
 			if (!self::doRelJmpMatch($id)){
-				return self::FAIL_MATCH_LABEL;
+				return self::$_FAIL_MATCH_LABEL;
 			}
 		}
 		// collect all units
 		self::$_rel_jmp_units[$id] = array();
-		$c_units = self::getAmongUnits($id,self::$_rel_jmp_dst[$id]);
+		$c_units = self::getAmongUnits($id,self::$_rel_jmp_dst[$id]); // heavy function
 		if (!$c_units){
-			return self::FAIL_GET_UNITS;
+			return self::$_FAIL_GET_UNITS;
 		}else{
 			if ($id === reset($c_units)){ // jmp before label then ignore itself
 				array_shift($c_units);
@@ -830,14 +982,19 @@ class OrgansOperator{
 		}
 		// init Pos effects
 		self::initRelJmpPosEffects($id);
-		// calcuate total range
+
+		return self::resetControlTransferInstLenAfterRangeChanged($id);
+	}
+	private static function resetControlTransferInstLenAfterRangeChanged($id){
+		// calculate total range
 		self::$_rel_jmp_range[$id] = 0;
-		foreach ($c_units as $mid){
+		foreach (self::$_rel_jmp_units[$id] as $mid){
 			self::$_rel_jmp_range[$id] += self::getLen($mid);
-		}
+		}		
 		if ((isset(self::$_rel_jmp_max[$id]))and(self::$_rel_jmp_range[$id] > self::$_rel_jmp_max[$id])){ // overflow
-			return self::FAIL_OVER_RANGE;
+			return self::$_FAIL_OVER_RANGE;
 		}
+		self::getLen($id,true); // re-get inst len
 		return true;
 	}
 	private static function setRelJmpExpired($id,$dir){
@@ -866,89 +1023,263 @@ class OrgansOperator{
 			unset (self::$_rel_jmp_expired[$id]);
 		}
 		unset (self::$_rel_jmp_units[$id]);
+	}	
+	// show TODO: delete
+	// public static function show(){
+	// 	$c = self::getBeginUnit();
+	// 	echo '<table border=1>';
+	// 	echo '<tr><td>No.</td>';
+	// 	echo '<td>prev usable</td><td>prev forbid</td><td>asm</td><td>mem</td><td>len</td><td>GPR effects</td><td>next forbid</td><td>next usable</td><td>RelJmpArray</td><td>RelJmpEffect(<font color=blue>Prev</font> <font color=red>Next</font>)</td></tr>';
+	// 	while ($c){
+	// 		echo '<tr>';
+	// 		echo '<td>'."$c".'</td>';			
+	// 		$c_usable = self::getUsable($c);
+	// 		$c_inst   = self::getCode($c);
+	// 		$c_forbid = self::getForbid($c);
+	// 		$c_GPR_effects = self::getGPReffects($c);
+	// 		echo '<td>';
+	// 		if (isset($c_usable[P])){
+	// 			var_dump ($c_usable[P]);
+	// 		}
+	// 		echo '</td>';
+	// 		echo '<td>';
+	// 		var_dump ($c_forbid[P]);
+	// 		echo '</td>';
+	// 		echo '<td>';
+	// 		echo 'Comment: ';
+	// 		echo '[<font color = blue>';
+	// 		echo self::echoComment($c);
+	// 		echo '</font>]';
+	// 		echo '<br>';
+	// 		var_dump ($c_inst);
+	// 		echo '</td>';
+	// 		echo '<td>';
+	// 		if (isset($c_inst[P_M_REG])){
+	// 			var_dump(self::$_mem_operand_map[$c_inst[P_M_REG]]);
+	// 		}
+	// 		echo '</td>';
+	// 		$c_len = self::getLen($c);
+	// 		echo '<td>'.$c_len.'</td>';
+	// 		echo '<td>';
+	// 		var_dump ($c_GPR_effects);
+	// 		echo '</td>';
+	// 		echo '<td>';
+	// 		if (isset($c_forbid[N])){
+	// 			var_dump ($c_forbid[N]);
+	// 		}
+	// 		echo '</td>';
+	// 		echo '<td>';
+	// 		if (isset($c_usable[N])){
+	// 			var_dump ($c_usable[N]);
+	// 		}
+	// 		echo '</td>';
+	// 		echo '<td>';
+	// 		if (isset(self::$_rel_jmp_dst[$c])){
+	// 			echo '<br>$_rel_jmp_dst: ';
+	// 			if (false === self::$_rel_jmp_dst[$c]){
+	// 				echo '<font color=red><b>FALSE</b></font>';
+	// 			}else{
+	// 				echo self::$_rel_jmp_dst[$c];
+	// 			}
+	// 			echo '<br>$_rel_jmp_range: '.self::$_rel_jmp_range[$c];
+	// 			echo '<br>$_rel_jmp_max: ';
+	// 			if (isset(self::$_rel_jmp_max[$c])){
+	// 				echo self::$_rel_jmp_max[$c];
+	// 			}else{
+	// 				echo 'Null';
+	// 			}
+	// 			echo '<br>$_rel_jmp_units: ';
+	// 			var_dump (self::$_rel_jmp_units[$c]);
+	// 		}else{
+	// 			echo '-';
+	// 		}
+	// 		echo '</td>';
+	// 		echo '<td>';
+	// 		if (isset(self::$_rel_jmp_pos_effects[$c][P])){
+	// 			echo '<font color=blue>Prev:';
+	// 			var_dump (self::$_rel_jmp_pos_effects[$c][P]);
+	// 			echo '</font>';
+	// 		}
+	// 		if (isset(self::$_rel_jmp_pos_effects[$c][N])){
+	// 			echo '<font color=red>Next:';
+	// 			var_dump (self::$_rel_jmp_pos_effects[$c][N]);
+	// 			echo '</font>';
+	// 		}
+	// 		echo '</td>';
+	// 		echo '</tr>';			
+	// 		$c = self::next($c);
+	// 	}
+	// 	echo '</table>';
+	// }
+
+	/////////////////////////////////////////////////////////////////////////
+	// all protected attribut function is for Organ Wrapper
+
+	// create a new 
+	protected static function Physic_create(){
+		self::flushAll();
+		// self::$_sec = $sec;
 	}
-	// show
-	public static function show(){
-		$c = self::getBeginUnit();
-		echo '<table border=1>';
-		echo '<tr><td>No.</td>';
-		echo '<td>prev usable</td><td>prev forbid</td><td>asm</td><td>len</td><td>GPR effects</td><td>next forbid</td><td>next usable</td><td>RelJmpArray</td><td>RelJmpEffect(<font color=blue>Prev</font> <font color=red>Next</font>)</td></tr>';
-		while ($c){
-			echo '<tr>';
-			echo '<td>'."$c".'</td>';			
-			$c_usable = self::getUsable($c);
-			$c_inst   = self::getCode($c);
-			$c_forbid = self::getForbid($c);
-			$c_GPR_effects = self::getGPReffects($c);
-			echo '<td>';
-			if (isset($c_usable[P])){
-				var_dump ($c_usable[P]);
-			}
-			echo '</td>';
-			echo '<td>';
-			var_dump ($c_forbid[P]);
-			echo '</td>';
-			echo '<td>';
-			echo 'Comment: ';
-			echo '[<font color = blue>';
-			echo self::echoComment($c);
-			echo '</font>]';
-			echo '<br>';
-			var_dump ($c_inst);
-			echo '</td>';
-			$c_len = self::getLen($c);
-			echo '<td>'.$c_len.'</td>';
-			echo '<td>';
-			var_dump ($c_GPR_effects);
-			echo '</td>';
-			echo '<td>';
-			if (isset($c_forbid[N])){
-				var_dump ($c_forbid[N]);
-			}
-			echo '</td>';
-			echo '<td>';
-			if (isset($c_usable[N])){
-				var_dump ($c_usable[N]);
-			}
-			echo '</td>';
-			echo '<td>';
-			if (isset(self::$_rel_jmp_dst[$c])){
-				echo '<br>$_rel_jmp_dst: ';
-				if (false === self::$_rel_jmp_dst[$c]){
-					echo '<font color=red><b>FALSE</b></font>';
-				}else{
-					echo self::$_rel_jmp_dst[$c];
+	// reloc jmp array
+	protected static function Physic_relocJmpVector($idx,$data,$type){
+		if (1 == $type){
+			if (0 === self::$_unit_inst[$idx][IMM_IS_LABEL]){
+				self::$_unit_inst[$idx][IMM_IS_LABEL] = $data;
+				self::$_rel_jmp_dst[$idx] = $data;
+				if ($a = Instruction::getJmpRangeLmt(self::$_unit_inst[$idx][INST])){
+					self::$_rel_jmp_max[$idx] = $a;
 				}
-				echo '<br>$_rel_jmp_range: '.self::$_rel_jmp_range[$c];
-				echo '<br>$_rel_jmp_max: ';
-				if (isset(self::$_rel_jmp_max[$c])){
-					echo self::$_rel_jmp_max[$c];
-				}else{
-					echo 'Null';
-				}
-				echo '<br>$_rel_jmp_units: ';
-				var_dump (self::$_rel_jmp_units[$c]);
+				self::$_rel_jmp_range[$idx] = 0;
+				self::$_rel_jmp_units[$idx] = array();
+				self::$_rel_jmp_expired[$idx] = $idx;
 			}else{
-				echo '-';
+				return false;
 			}
-			echo '</td>';
-			echo '<td>';
-			if (isset(self::$_rel_jmp_pos_effects[$c][P])){
-				echo '<font color=blue>Prev:';
-				var_dump (self::$_rel_jmp_pos_effects[$c][P]);
-				echo '</font>';
+		}else{
+			if (0 === self::$_unit_inst[$idx][LABEL_FROM]){
+				self::$_unit_inst[$idx][LABEL_FROM] = $data;
+			}else{
+				return false;
 			}
-			if (isset(self::$_rel_jmp_pos_effects[$c][N])){
-				echo '<font color=red>Next:';
-				var_dump (self::$_rel_jmp_pos_effects[$c][N]);
-				echo '</font>';
-			}
-			echo '</td>';
-			echo '</tr>';			
-			$c = self::next($c);
 		}
-		echo '</table>';
+		return true;
+	}
+	// mem 参数 归类索引
+	protected static function Physic_replaceMem($unit){
+		return self::Physic_new_MemOperation($unit[P_M_REG]);
+	}
+	private static function Physic_new_MemOperation($array){
+		$idx = array_search($array, self::$_mem_operand_map);
+		if (false === $idx){
+			self::$_mem_operand_map[] = $array;
+			return count(self::$_mem_operand_map) - 1;
+		}
+		return $idx;
+	}
+	// reloc map
+	protected static function Physic_RelocMap_add($relocArr){
+		$idx = array_search($relocArr, self::$_reloc_map);
+		if (false === $idx){
+			self::$_reloc_map[] = $relocArr;
+			return count(self::$_reloc_map) - 1;
+		}
+		return $idx;
+	}
+	protected static function Physic_Insert($unit,$pos,$comment){
+		$idx = self::$_unit_insert_index;
+		self::$_unit_insert_index ++;
+		
+		self::$_unit_inst[$idx] = $unit;
+
+		if (!self::insertUnit($pos,$idx)){
+			return false;
+		}
+		self::Physic_Init_Inst_Effects($idx);
+		if (TRACK_COMMENT_ON){
+			self::setComment($idx,$comment);
+		}
+		return $idx;
+	}
+	// match len predictd with original length only avalid in ready process
+	protected static function Physic_recheck_len($id,$sec){
+		$ret = false;
+		$c_inst = self::getCode($id);
+		if (isset($c_inst[ORIGINAL_LEN])){
+			if (isset(self::$_unit_inst_len[$id])){
+				if (self::$_unit_inst_len[$id] !== $c_inst[ORIGINAL_LEN]){
+					GeneralFunc::LogInsert('Diff len between predicted and original,['.self::$_unit_inst_len[$id].'!='.$c_inst[ORIGINAL_LEN].'], sec: '.$sec.', id: '.$id.', ['.$c_inst[INST].'],', NOTICE);
+					$ret = self::$_unit_inst_len[$id];
+					self::setInstLength($id,$c_inst[ORIGINAL_LEN]);
+				}
+			}
+		}
+		return $ret;
+	}
+	// init inst's effects
+	private static function Physic_Init_Inst_Effects($id){
+		$c_inst = self::getCode($id);
+		if (isset($c_inst[INST])){
+			$c_operands_num = 0;
+			$c_special_operand_flag = false;
+			if (isset($c_inst[OPERAND])){
+				$c_operands_num = count($c_inst[OPERAND]);
+				if (in_array(T_ORS, $c_inst[P_TYPE])){
+					$c_special_operand_flag = true;
+				}
+			}
+			$inst_effects = Instruction::getInstructionOpt($c_inst[INST],$c_operands_num,$c_special_operand_flag);
+			foreach ($inst_effects as $key => $value) {
+				if (('SRC_MEM' === $key) or ('DST_MEM' === $key)){
+					$c_reg = ('SRC_MEM' === $key)?'ESI':'EDI';
+					$c_addr_bits = isset($c_inst[PREFIX]['a_resize'])?Instruction::getCurrentBits(true):OPT_BITS;
+					$c_mem_con = array(SIB_BASE => $c_reg, ADDR_BITS => $c_addr_bits, OP_BITS => $value[0]);
+					$mid = self::Physic_new_MemOperation($c_mem_con);
+					self::Physic_new_effects(T_MEM,$id,$mid,$value[1]);
+				}elseif (Instruction::isEflag($key)){
+					self::Physic_new_effects(T_EFS,$id,$key,$value);
+				}elseif (Instruction::getGeneralRegIndex($key)){
+					self::Physic_new_effects(T_GPR,$id,$key,$value);
+				}elseif (STACK === $key){
+					self::$_STACK_effects[$id] = $value;
+				}elseif (is_int($key)){ // operand
+					if ($c_operands_num > 0){
+						if (isset($c_inst[OPERAND][$key+1])){
+							if (T_MEM === $c_inst[P_TYPE][$key+1]){
+								self::Physic_new_effects($c_inst[P_TYPE][$key+1],$id,self::$_unit_inst[$id][OPERAND][$key+1],$value);
+							}else{
+								self::Physic_new_effects($c_inst[P_TYPE][$key+1],$id,$c_inst[OPERAND][$key+1],$value);
+								if ((T_GPR === $c_inst[P_TYPE][$key+1])and($value & W)){
+									if (self::isSpGpr($c_inst[OPERAND][$key+1])){
+										self::$_SP_writes[$id] = true;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if (isset($c_inst[PREFIX])){
+			if ($c_prefix = array_search(PREFIX_GROUP_1, $c_inst[PREFIX])){
+				if ($c_effects = Instruction::getInstructionOpt($c_prefix,0)){
+					foreach ($c_effects as $key => $value){
+						if (Instruction::isEflag($key)){
+							self::Physic_new_effects(T_EFS,$id,$key,$value);
+						}elseif (Instruction::getGeneralRegIndex($key)){
+							self::Physic_new_effects(T_GPR,$id,$key,$value);
+						}
+					}
+				}
+			}
+		}
+	}
+	//
+	private static function Physic_new_effects($type,$id,$key,$opt){
+		if (T_GPR === $type){
+			$reg_idx = Instruction::getGeneralRegIndex($key);
+			$reg_bits = Instruction::getGeneralRegBits($key,true);
+			if (isset(self::$_GPR_effects[$id][$reg_idx][$reg_bits])){
+				$opt |= self::$_GPR_effects[$id][$reg_idx][$reg_bits];
+			}
+			self::$_GPR_effects[$id][$reg_idx][$reg_bits] = $opt;
+		}elseif (T_MEM === $type){
+			if ($c_mem_operand = self::getMemOperandArr($key)){
+				if (isset($c_mem_operand[SIB_BASE])){
+					self::Physic_new_effects(T_GPR,$id,$c_mem_operand[SIB_BASE],R);
+				}
+				if (isset($c_mem_operand[SIB_INDEX])){
+					self::Physic_new_effects(T_GPR,$id,$c_mem_operand[SIB_INDEX],R);
+				}
+			}			
+			if (isset(self::$_MEM_effects[$id][$key])){
+				$opt |= self::$_MEM_effects[$id][$key];
+			}
+			self::$_MEM_effects[$id][$key] = $opt;
+		}elseif (T_EFS === $type){
+			if (isset(self::$_EFLAGS_effects[$id][$key])){
+				$opt |= self::$_EFLAGS_effects[$id][$key];
+			}
+			self::$_EFLAGS_effects[$id][$key] = $opt;
+		}
 	}
 }
-
-?>

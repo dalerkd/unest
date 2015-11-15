@@ -1,9 +1,8 @@
 <?php
-
-if(!defined('UNEST.ORG')) {
-        exit('Access Denied');
-}
-
+require dirname(__FILE__)."/../env.conf.php";
+define('OPT_BITS',32);
+define('IO_PARSER','coff32');
+define('STACK_POINTER_REG','ESP');
 class IOFormatParser{
     
 	//
@@ -267,7 +266,7 @@ class IOFormatParser{
 	//
 	//
 	private static function analysis_coff($buf,$language,&$ret){
-		
+		$CodeSectionArray = array();
 		$lpObj = 0;
 		$machine = self::get_hex_2_dec($buf,$lpObj,2); //取Machine域
 		$lpObj += 2;
@@ -356,7 +355,7 @@ class IOFormatParser{
 			}
 			foreach (self::$_IMAGE_SECTION_HEADER_Characteristics_L as $key => $value){
 				if ($value == ($tmp_Characteristics_L & $value)){
-					//echo "  $key |";
+					// echo "  $key |";
 					if ($key == 'IMAGE_SCN_CNT_CODE'){                        //代码节 属性
 						if ($SizeOfRawData > 0){ //       长度 有效
 							$CodeSectionArray[$SecNum]['base'] = $tmp;        //节表信息 基址
@@ -394,6 +393,11 @@ class IOFormatParser{
 			$SecNum ++;
 		}
 
+		if (empty($CodeSectionArray)){
+			GeneralFunc::LogInsert('no any code section has be found.',ERROR);
+			return false;
+		}
+
 		if (defined('DEBUG_ECHO')){
 			echo "<br><br>**************** section  一览 ************<br>";
 			echo "<table border = 1><tr><td>段编号</td><td>段描述基址</td><td>段名</td><td>PointerToRawData</td><td>SizeOfRawData</td><td>PointerToRelocation</td><td>NumberOfRelocation</td><td>Characteristics(L)</td><td>Characteristics(H)</td></tr>";
@@ -409,7 +413,7 @@ class IOFormatParser{
 				echo "<td>".$CodeSectionArray[$SecNum]['Characteristics_L']."</td>";
 				echo "<td>".$CodeSectionArray[$SecNum]['Characteristics_H']."</td>";
 				echo "</tr>";
-				if ($RelocArray[$SecNum]){
+				if (isset($RelocArray[$SecNum])){
 					foreach ($RelocArray[$SecNum] as $c_reloc_number => $b){
 						echo "<tr bgcolor=\"yellow\"><td></td><td>reloc</td><td>$c_reloc_number:</td><td>VirtualAddress:</td><td>".$RelocArray[$SecNum][$c_reloc_number]['VirtualAddress']."</td><td>SymbolTableIndex:</td><td>".$RelocArray[$SecNum][$c_reloc_number]['SymbolTableIndex']."</td><td>Type:</td><td>".$RelocArray[$SecNum][$c_reloc_number]['Type']."</td></tr>";
 					}
@@ -626,7 +630,7 @@ class IOFormatParser{
 
 		//返回 4 个 表  $CodeSectionArray / $RelocArray / $SymbalTableArray / $AuxiliaryTableArray
 		$ret['CodeSectionArray']    = $CodeSectionArray;
-		$ret['RelocArray']          = $RelocArray;
+		$ret['RelocArray']          = (isset($RelocArray))?$RelocArray:array();
 		$ret['SymbalTableArray']    = $SymbalTableArray;
 		$ret['AuxiliaryTableArray'] = $AuxiliaryTableArray;
 	  
@@ -738,9 +742,7 @@ class IOFormatParser{
 		}    
 
 		global $outputfile;
-		file_put_contents($outputfile,$buf);
-
-	  
+		file_put_contents($outputfile,$buf);	  
 	}
 
 
@@ -807,6 +809,222 @@ class IOFormatParser{
 			$buf[$lp]     = pack("H*",substr($y,2,2));	
 		}
 		return false;
+	}
+
+
+	private static $_output_asm;
+	private static $_c_sec;
+	private static $_fail_flag;
+	private static $_reloc_line;
+	private static $_reloc_arr_imm;
+	private static $_reloc_arr_dsp;
+	private static $_c_line;
+	private static $_reloc_retreat;
+	private static $_reloc_dsp_default_value;
+	const RelocDispNickValue = '0x2e2e2e2e';
+
+	public static function output_begin($sec){
+		self::$_output_asm[$sec] = array();
+		self::$_fail_flag[$sec]  = false;
+		self::$_reloc_line[$sec] = array();
+		self::$_reloc_arr_imm[$sec] = array();		
+		self::$_reloc_arr_dsp[$sec] = array();
+		self::$_reloc_dsp_default_value[$sec] = array();
+		self::$_c_sec  = $sec;
+		self::$_c_line = 0;
+		self::$_reloc_retreat = array();
+	}
+
+	public static function output_insert($line){
+		$c_line = self::$_c_line;
+		self::$_output_asm[self::$_c_sec][self::$_c_line] = $line;
+		self::$_c_line ++;
+		if (isset(self::$_reloc_arr_imm[self::$_c_sec][$c_line])){
+			self::output_insert('Reloc_Imm_'.self::$_c_sec.'_'.$c_line.':');
+		}
+		if (isset(self::$_reloc_arr_dsp[self::$_c_sec][$c_line])){
+			self::output_insert('Reloc_Dsp_'.self::$_c_sec.'_'.$c_line.':');
+		}
+	}
+	// relType: 1.imm 2.displacement
+	public static function get_reloc_num($relType,$relArr,$value){
+		self::$_reloc_line[self::$_c_sec][] = self::$_c_line;		
+		if (1 === $relType){
+			self::$_reloc_dsp_default_value[self::$_c_sec][self::$_c_line] = $value;
+			self::$_reloc_arr_imm[self::$_c_sec][self::$_c_line] = $relArr;
+			return self::RelocDispNickValue;
+		}elseif (2 === $relType){
+			self::$_reloc_dsp_default_value[self::$_c_sec][self::$_c_line] = $value;
+			self::$_reloc_arr_dsp[self::$_c_sec][self::$_c_line] = $relArr;
+			return self::RelocDispNickValue;
+		}
+		self::$_fail_flag[self::$_c_sec] = true;
+		return false;
+	}
+
+	private static function gen_asm_file($asmFilename){
+		@$file = fopen($asmFilename, "w");
+		if ($file){
+			$c = '[bits 32]'.PHP_EOL;
+			foreach (self::$_output_asm as $sec => $c_contents){
+				$c .= ';********** section '.$sec.' **********'.PHP_EOL;
+				$c .= '[SECTION .'.$sec.']'.PHP_EOL;
+				$c .= 'ALIGN 1'.PHP_EOL;
+				$c .= 'dd sec_'.$sec.'_end - sec_'.$sec.'_start'.PHP_EOL;
+				$c .= 'sec_'.$sec.'_start:'.PHP_EOL;
+				$reloc_desc = '';
+				foreach (self::$_reloc_line[$sec] as $c_line){					
+					if (isset(self::$_reloc_arr_imm[$sec][$c_line])){
+						$c .= 'dd '.self::$_reloc_dsp_default_value[$sec][$c_line].PHP_EOL;
+						$reloc_desc .= 'dd Reloc_Imm_'.$sec.'_'.$c_line.' - '.'sec_'.$sec.'_code_start'.PHP_EOL;
+						$reloc_desc .= 'dd '.self::$_reloc_arr_imm[$sec][$c_line][RELOC_SYMBOLTABLEINDEX].PHP_EOL;
+						$reloc_desc .= 'dw '.self::$_reloc_arr_imm[$sec][$c_line][RELOC_TYPE].PHP_EOL;
+						self::$_reloc_retreat[$sec][] = false;
+					}
+					if (isset(self::$_reloc_arr_dsp[$sec][$c_line])){
+						$c .= 'dd '.self::$_reloc_dsp_default_value[$sec][$c_line].PHP_EOL;
+						$reloc_desc .= 'dd Reloc_Dsp_'.$sec.'_'.$c_line.' - '.'sec_'.$sec.'_code_start'.PHP_EOL;
+						$reloc_desc .= 'dd '.self::$_reloc_arr_dsp[$sec][$c_line][RELOC_SYMBOLTABLEINDEX].PHP_EOL;
+						$reloc_desc .= 'dw '.self::$_reloc_arr_dsp[$sec][$c_line][RELOC_TYPE].PHP_EOL;
+						self::$_reloc_retreat[$sec][] = true;
+					}
+				}
+				$c .= $reloc_desc;
+				$c .= 'sec_'.$sec.'_code_start:'.PHP_EOL;
+				foreach ($c_contents as $asm){
+					$c .= $asm.PHP_EOL;
+				}
+				$c .= 'sec_'.$sec.'_end:'.PHP_EOL;
+			}
+			fwrite($file,$c);			
+			fclose($file);
+			return true;
+		}
+		return false;
+	}
+
+	private static function re_treat_file($binFileName,$srcFilename,$dstFilename,$sec_array){
+		$new_sec_contents = array();
+		$bin_buf = file_get_contents($binFileName);
+		$sec_ptr = 0;
+		$all_secs = array_keys(self::$_output_asm);
+		// split buff by section
+		foreach ($all_secs as $c_sec){
+			$reloc_value = array();
+			$size = self::get_hex_2_dec($bin_buf,$sec_ptr,4,true);
+	
+			$c_ptr = $sec_ptr + 4;
+			$sec_ptr += $size + 4;
+			$reloc_n = count(self::$_reloc_line[$c_sec]);	
+			for ($i=0;$i < $reloc_n;$i++){ // read reloc value
+				$reloc_value[] = substr($bin_buf,$c_ptr,4);
+				$c_ptr += 4;
+				$size  -= 4;
+			}
+			$c_buf = substr($bin_buf,$c_ptr,$size);
+			$c_ptr = 0;
+			// seek reloc pos and replace it			
+			$reloc_size = $reloc_n*(4+4+2);
+			$reloc_i = 0;
+			foreach (self::$_reloc_retreat[$c_sec] as $n => $flag){
+				$offset = self::get_hex_2_dec($c_buf,$c_ptr,4,true);
+				$code_offset = $offset + $reloc_size;
+				$seeked = false;
+				if ($flag){	// mem	
+					for ($i=4;$i<9;$i++){
+						// 0x2e2e2e2e == 774778414
+						if (774778414 === self::get_hex_2_dec($c_buf,$code_offset-$i,4,true)){
+							$seeked = true;							
+							break;
+						}
+					}					
+				}else{      // imm
+					$i = 4;					
+					$seeked = true;
+				}
+				if (!$seeked){ // seek fail!
+					return false;
+				}
+				$c_buf[$code_offset-$i+0] = $reloc_value[$reloc_i][0];
+				$c_buf[$code_offset-$i+1] = $reloc_value[$reloc_i][1];
+				$c_buf[$code_offset-$i+2] = $reloc_value[$reloc_i][2];
+				$c_buf[$code_offset-$i+3] = $reloc_value[$reloc_i][3];
+				self::hex_write($c_buf,$c_ptr,$offset - $i);
+				$reloc_i ++;							
+				$c_ptr += 4 + 4 + 2;
+			}
+			// $c_buf = "\xcc".$c_buf;
+			$new_sec_contents[$c_sec][0] = $c_buf;
+			$new_sec_contents[$c_sec][1] = $reloc_n;
+			$new_sec_contents[$c_sec][2] = strlen($c_buf) - $reloc_n*(4+4+2);
+
+			// var_dump($reloc_value);
+			// var_dump($size);
+			// var_dump($c_sec);
+			// var_dump(self::$_reloc_retreat[$c_sec]);
+			// file_put_contents("d:\\abc.".$c_sec.".bin", $c_buf);	
+		}
+		// write new into obj file
+		// var_dump($new_sec_contents);
+		@$buf = file_get_contents($srcFilename);
+		if (!$buf){return false;}	
+
+		$c_ptr = strlen($buf);
+		foreach ($new_sec_contents as $sec => $contents){
+			if (isset($sec_array[$sec])){
+
+				$align = 1;
+				foreach (self::$_IMAGE_SECTION_HEADER_Characteristics_H_Align as $c => $d){
+					if ($d == ($sec_array[$sec]['Characteristics_H'] & $d)){
+						$align = $c;
+						break;
+					}
+				}
+
+				$buf .= $contents[0];
+
+				$inc_size_for_align = $align - $contents[2] % $align;
+				if ($inc_size_for_align){
+					$contents[2] += $inc_size_for_align;
+					for (;$inc_size_for_align>0;$inc_size_for_align--){
+						$buf .= "\xcc"; // todo: use default align value
+					}
+				}
+
+				self::hex_write($buf,$sec_array[$sec]['base'] + 4 + 4,$c_ptr);  
+				$c_ptr += $contents[1] * (4 + 4 + 2);
+				self::hex_write($buf,$sec_array[$sec]['base'] + 4 + 4 + 4 + 4,$contents[1],2);
+				self::hex_write($buf,$sec_array[$sec]['base'],$contents[2]);
+				self::hex_write($buf,$sec_array[$sec]['base'] + 4,$c_ptr);
+				$c_ptr += $contents[2];
+			}
+		}
+		return file_put_contents($dstFilename,$buf);
+	}
+
+	public static function output_commit($basePath,$filename,$dst,$sec_array){
+		$asmFilename    = $basePath.$filename.'.result.out.asm';
+		$reportFilename = $basePath.$filename.'.result.out.report';		
+		$binFilename    = $basePath.$filename.'.result.out.bin';
+		$srcFilename    = $basePath.$filename;
+		$dstFilename    = $basePath.$dst;
+		if (self::gen_asm_file($asmFilename)){
+			if (file_exists($binFilename)){
+				if (!unlink($binFilename)){
+					return false;
+				}
+			}
+			exec (ASM_CMD." -f bin \"$asmFilename\" -o \"$binFilename\" -Z \"$reportFilename\" -Xvc");
+			if (file_exists($binFilename)){
+				// re-treat dstFile
+				return self::re_treat_file($binFilename,$srcFilename,$dstFilename,$sec_array);
+			}
+		}
+		return false;
+	}
+
+	public static function show(){
+		var_dump(self::$_output_asm[self::$_c_sec]);
 	}
 
 }

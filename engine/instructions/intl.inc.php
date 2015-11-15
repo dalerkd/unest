@@ -12,14 +12,14 @@ $Intel_instruction = array(
   'DD'        => array('data' => 1),
 
 //# Conventional instructions
-  'AAA'       => array(              'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2,'AX'=>3),
+  'AAA'       => array(              'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>3,'CF'=>2,'PF'=>2,'AX'=>3),
   'AAB'       => array(              'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2,'AX'=>3),
   'AAM'       => array(              'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2,'AL'=>3,'AH'=>2),
   'AAS'       => array(              'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>3,'CF'=>2,'PF'=>2,'AX'=>3),
   'ADC'       => array('0'=>3,'1'=>1,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>3,'PF'=>2),
   'ADD'       => array('0'=>3,'1'=>1,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),
   'AND'       => array('0'=>3,'1'=>1,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),
-  'ARPL'      => array (                             'ZF'=>2),
+  'ARPL'      => array(                              'ZF'=>2),
   'BB0_RESET' => array(), //unkown
   'BB1_RESET' => array(), //unkown
   'BOUND'     => array('0'=>1,),
@@ -30,7 +30,7 @@ $Intel_instruction = array(
   'BTC'       => array('0'=>3,       'OF'=>2,'SF'=>2,        'AF'=>2,'CF'=>2,'PF'=>2,),
   'BTR'       => array('0'=>3,       'OF'=>2,'SF'=>2,        'AF'=>2,'CF'=>2,'PF'=>2,),
   'BTS'       => array('0'=>3,       'OF'=>2,'SF'=>2,        'AF'=>2,'CF'=>2,'PF'=>2,),
-  'CALL'      => array(STACK=>3,'0'=>1,'ESP'=>3,'IP'=>2),//,'EAX'=>2), //注：CALL 本身不改变EAX，这里暂时为_std调用函数而设置 * 临时
+  'CALL'      => array(STACK=>3,'0'=>1,'ESP'=>3,'IP'=>2),
   'CBW'       => array(                                                              'AL'=>3,'AX'=>2),
   'CDQ'       => array(                                                                              'EAX'=>1,'EDX'=>2),
   'CDQE'      => array(                                                                              'EAX'=>3,'RAX'=>2),
@@ -167,7 +167,7 @@ $Intel_instruction = array(
   'FNOP'      => array(), //无操作
   'FNSAVE'    => array(), //存储 x87 FPU 状态
   'FNSTCW'    => array(), //存储 x87 FPU 控制字
-  'FNSTENV'   => array(), //存储 x87 FPU 环境
+  'FNSTENV'   => array('0'=>2), //存储 x87 FPU 环境
   'FNSTSW'    => array(), //存储 x87 FPU 状态字 //执行 指令时，处理器会在执行其它指令之前更新 AX 寄存器。这样，就可以确保 AX 寄存器存储的状态是 FPU 指令完成之前的状态。
   'FPATAN'    => array(),//部分反正切
   'FPREM'     => array(),//部分余数
@@ -231,7 +231,7 @@ $Intel_instruction = array(
   'INVPCID'   => array('0'=>3),//Invalidate Process-Context Identifier
   'INVLPG'    => array(),//使 TLB 项目失效
   'INVLPGA'	  => array('EAX'=>3,'ECX'=>3),//unkown
-  'IRET'      => array(STACK=>3,'ESP'=>3,'IP'=>2,'OF' => 2,'SF' => 2,'ZF' => 2,'AF' => 2,'CF' => 2,'PF' => 2,'DF' => 2,'TF' => 2,'IF' => 2,'NT' => 1),//中断返回
+  'IRET'      => array(STACK=>3,'ESP'=>3,'IP'=>2,'OF' => 2,'SF' => 2,'ZF' => 2,'AF' => 2,'CF' => 2,'PF' => 2,'DF' => 2,'TF' => 2,'IF' => 2,'NT' => 3,'RF' => 2),//中断返回
   'IRETD'     => array(STACK=>3,'ESP'=>3,'IP'=>2,'OF' => 2,'SF' => 2,'ZF' => 2,'AF' => 2,'CF' => 2,'PF' => 2,'DF' => 2,'TF' => 2,'IF' => 2),//中断返回
   'IRETQ'     => array(STACK=>3,'ESP'=>3,'IP'=>2,'OF' => 2,'SF' => 2,'ZF' => 2,'AF' => 2,'CF' => 2,'PF' => 2,'DF' => 2,'TF' => 2,'IF' => 2),//中断返回
   'IRETW'     => array(STACK=>3,'ESP'=>3,'IP'=>2,'OF' => 2,'SF' => 2,'ZF' => 2,'AF' => 2,'CF' => 2,'PF' => 2,'DF' => 2,'TF' => 2,'IF' => 2),//中断返回
@@ -275,12 +275,12 @@ $Intel_instruction = array(
   'LAHF'      => array(        'SF'=>1,'ZF'=>1,'AF'=>1,'CF'=>1,'PF'=>1,'AH'=>2),//将状态标志加载到 AH 寄存器
   'LAR'       => array('0'=>2,'1'=>1,  'ZF'=>2),//加载访问权限字节
   'LDS'		  => array('0'=>2,'1'=>1),//加载远指针
-  'LEA'       => array('0'=>2,'1'=> -1),//加载有效地址// lea 的第二参数 不读也不写
+  'LEA'       => array('0'=>2,'1'=> 0),//加载有效地址// lea 的第二参数 不读也不写
   'LEAVE'     => array(STACK=>3,'BP'=>3,'SP'=>2),//高级过程退出
   'LES'       => array('0'=>2),//加载远指针
   'LFENCE'    => array(),//加载边界
   'LFS'       => array('0'=>2),//加载远指针
-  'LGDT'      => array(),      //加载全局描述符表格寄存器
+  'LGDT'      => array('0'=>1),      //加载全局描述符表格寄存器
   'LGS'       => array('0'=>2),//加载远指针
   'LIDT'      => array(),      //加载中断描述符表格寄存器
   'LLDT'      => array('0'=>1),//加载局部描述符表格寄存器
@@ -288,10 +288,10 @@ $Intel_instruction = array(
   'LOCK'      => array('isPrefix'=>1),//声言 LOCK# 信号前缀
 //LOADALL		void				[	0f 07]					386,UNDOC
 //LOADALL286	void				[	0f 05]					286,UNDOC
-  'LODSB'     => array('DF'=>1,'ESI'=>3,'AL'=>2),//加载字符串
-  'LODSD'     => array('DF'=>1,'ESI'=>3,'EAX'=>2),//加载字符串
-  'LODSQ'     => array('DF'=>1,'RSI'=>3,'RAX'=>2),//加载字符串
-  'LODSW'     => array('DF'=>1,'ESI'=>3,'AX'=>2),//加载字符串
+  'LODSB'     => array('DF'=>1,'ESI'=>3,'AL'=>2,'SRC_MEM'=>array(8,1)),//加载字符串
+  'LODSD'     => array('DF'=>1,'ESI'=>3,'EAX'=>2,'SRC_MEM'=>array(32,1)),//加载字符串
+  'LODSQ'     => array('DF'=>1,'RSI'=>3,'RAX'=>2,'SRC_MEM'=>array(64,1)),//加载字符串
+  'LODSW'     => array('DF'=>1,'ESI'=>3,'AX'=>2,'SRC_MEM'=>array(16,1)),//加载字符串
 
   'LOOP'      => array('0'=>1,'CX'=>3,'IP'=>2),        //递减计数；计数  0 时短跳转
   'LOOPE'     => array('0'=>1,'CX'=>3,'ZF'=>1,'IP'=>2),//递减计数；计数  0 且 ZF=1 时短跳转
@@ -303,12 +303,14 @@ $Intel_instruction = array(
   'LTR'       => array('0'=>1),//加载任务寄存器
   'MFENCE'    => array(),//内存边界		void				[	0f ae f0]				WILLAMETTE,SSE2
   'MONITOR'   => array('EAX'=>1,'ECX'=>3,'EDX'=>3),//设置监视器地址		reg_rax,reg_ecx,reg_edx		[---:	0f 01 c8]				X64,ND
-  'MOV'       => array('0'=>2,'1'=>1),  //移动
+  'MOV'       => array('0'=>2,'1'=>1,
+                       'OTHER_REG_STATUS_FLAG_UNDEF'=>true // 参数中有非GPR寄存器时,状态标志位皆为undefined
+                      ),  //移动
   'MOVD'      => array('0'=>2,'1'=>1),  //移动双字		rm32,mmxreg			[mr:	np 0f 7e /r]				PENT,MMX,SD
-  'MOVSB'     => array('DF'=>1,'SI'=>3,'DI'=>3),//		void				[	a4]					8086
-  'MOVSD'	  => array('DF'=>1,'SI'=>3,'DI'=>3),//	void				[	o32 a5]					386
-  'MOVSQ'     => array('DF'=>1,'SI'=>3,'DI'=>3),//		void				[	o64 a5]					X64
-  'MOVSW'     => array('DF'=>1,'SI'=>3,'DI'=>3),//		void				[	o16 a5]					8086
+  'MOVSB'     => array('DF'=>1,'SI'=>3,'DI'=>3,'SRC_MEM'=>array(8,1),'DST_MEM'=>array(8,2),),//		void				[	a4]					8086
+  'MOVSD'     => array('DF'=>1,'SI'=>3,'DI'=>3,'SRC_MEM'=>array(32,1),'DST_MEM'=>array(32,2),),//	void				[	o32 a5]					386
+  'MOVSQ'     => array('DF'=>1,'SI'=>3,'DI'=>3,'SRC_MEM'=>array(64,1),'DST_MEM'=>array(64,2),),//		void				[	o64 a5]					X64
+  'MOVSW'     => array('DF'=>1,'SI'=>3,'DI'=>3,'SRC_MEM'=>array(16,1),'DST_MEM'=>array(16,2),),//		void				[	o16 a5]					8086
   'MOVSX'     => array('0'=>2,'1'=>1),//带符号扩展移动
   'MOVSXD'    => array('0'=>2,'1'=>1),//带符号扩展移动
   'MOVZX'     => array('0'=>2,'1'=>1),//带零扩展移动		reg64,rm16			[rm:	o64 0f b7 /r]				X64
@@ -421,10 +423,10 @@ RSLDT		mem80				[m:	0f 7b /0]				486,CYRIX,SMM
 //SALC		void				[	d6]					8086,UNDOC
   'SAR'       => array('0'=>3,'1'=>1,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'PF'=>2,'CF'=>2),//移位			rm8,unity			[m-:	d0 /7]					8086
   'SBB'       => array('0'=>3,'1'=>1,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>3,'PF'=>2),//带借位整数减法		mem,reg8			[mr:	hle 18 /r]				8086,SM,LOCK
-  'SCASB'     => array( 'AL'=>1, 'DI'=>3,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),//扫描字符串		void				[	repe ae]				8086
-  'SCASD'     => array('EAX'=>1,'EDI'=>3,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),//扫描字符串		void				[	repe o32 af]				386
-  'SCASQ'     => array( 'AX'=>1,'EDI'=>3,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),//扫描字符串		void				[	repe o64 af]				X64
-  'SCASW'     => array('RAX'=>1,'EDI'=>3,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),//扫描字符串		void				[	repe o16 af]				8086
+  'SCASB'     => array('DST_MEM'=>array(8,1),  'AL'=>1, 'DI'=>3,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),//扫描字符串		void				[	repe ae]				8086
+  'SCASD'     => array('DST_MEM'=>array(32,1),'EAX'=>1,'EDI'=>3,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),//扫描字符串		void				[	repe o32 af]				386
+  'SCASQ'     => array('DST_MEM'=>array(64,1), 'AX'=>1,'EDI'=>3,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),//扫描字符串		void				[	repe o64 af]				X64
+  'SCASW'     => array('DST_MEM'=>array(16,1),'RAX'=>1,'EDI'=>3,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),//扫描字符串		void				[	repe o16 af]				8086
   'SETA'      => array('0'=>2,'CF'=>1,'ZF'=>1), //高于（CF=0 且 ZF=0）时设置字节
   'SETAE'     => array('0'=>2,'CF'=>1), //高于或等于 (CF=0)时设置字节
   'SETB'      => array('0'=>2,'CF'=>1), //低于 (CF=1) 时设置字节
@@ -475,10 +477,10 @@ SMINTOLD	void				[	0f 7e]					486,CYRIX,ND
   'STD'       => array('DF'=>2),//设置方向标志		void				[	fd]					8086
 //STGI		void				[	0f 01 dc]				X64
   'STI'       => array('IF'=>2),//设置中断标志		void				[	fb]					8086
-  'STOSB'     => array( 'AL'=>1, 'DI'=>3,'DF'=>1),//存储字符串		void				[	aa]					8086
-  'STOSD'     => array('EAX'=>1, 'DI'=>3,'DF'=>1),//存储字符串		void				[	o32 ab]					386
-  'STOSQ'     => array('RAX'=>1, 'DI'=>3,'DF'=>1),//存储字符串		void				[	o64 ab]					X64
-  'STOSW'     => array( 'AX'=>1, 'DI'=>3,'DF'=>1),//存储字符串		void				[	o16 ab]					8086
+  'STOSB'     => array( 'AL'=>1, 'DI'=>3,'DF'=>1,'DST_MEM'=>array(8,2),),//存储字符串		void				[	aa]					8086
+  'STOSD'     => array('EAX'=>1, 'DI'=>3,'DF'=>1,'DST_MEM'=>array(32,2),),//存储字符串		void				[	o32 ab]					386
+  'STOSQ'     => array('RAX'=>1, 'DI'=>3,'DF'=>1,'DST_MEM'=>array(64,2),),//存储字符串		void				[	o64 ab]					X64
+  'STOSW'     => array( 'AX'=>1, 'DI'=>3,'DF'=>1,'DST_MEM'=>array(16,2),),//存储字符串		void				[	o16 ab]					8086
   'STR'       => array('0'=>2),//存储任务寄存		reg64				[m:	o64 0f 00 /1]				X64
   'SUB'       => array('0'=>3,'1'=>1,'OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'PF'=>2,'CF'=>2),//减法		mem,reg8			[mr:	hle 28 /r]				8086,SM,LOCK
 /*
@@ -543,7 +545,7 @@ XBTS		reg32,reg32			[rm:	o32 0f a6 /r]				386,UNDOC,ND
 //; specific ops first and only disassemble illegal ones as cmpps/cmpss.
   'CMPPS' => array(),
   'CMPSS' => array(),
-  'COMISS'=> array(),
+  'COMISS'=> array('OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),
   'CVTPI2PS' => array(),
   'CVTPS2PI' => array(),
   'CVTSI2SS' => array('0'=>1,'1'=>1),
@@ -714,7 +716,7 @@ XBTS		reg32,reg32			[rm:	o32 0f a6 /r]				386,UNDOC,ND
 //; CMPPD/CMPSD must come after the specific ops; that way the disassembler will find the
 //; specific ops first and only disassemble illegal ones as cmppd/cmpsd.
 //'CMPSD' => array(), //注释掉，因为重复了
-  'COMISD'=> array(),
+  'COMISD'=> array('OF'=>2,'SF'=>2,'ZF'=>2,'AF'=>2,'CF'=>2,'PF'=>2),
   'CVTDQ2PD' => array(),
   'CVTDQ2PS' => array(),
   'CVTPD2DQ' => array(),

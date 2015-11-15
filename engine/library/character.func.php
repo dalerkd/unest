@@ -100,6 +100,8 @@ class Character{
 	// $att    ： 属性来源(soul | meat | poly | bone)
 	// 返回    :  Rate
 	public static function initUnit($id,$att=SOUL){
+
+		if (OrgansOperator::isVirtUnit($id)){return false;}
         
 		$ret = false;
 
@@ -119,13 +121,13 @@ class Character{
 			
 			$obj = OrgansOperator::getCode($id);
 
-			if ((isset($obj[OPERATION]))and(isset(self::$_tpl[CTPL_OPT][$obj[OPERATION]]))){
-				foreach (self::$_tpl[CTPL_OPT][$obj[OPERATION]] as $k => $v){
+			if ((isset($obj[INST]))and(isset(self::$_tpl[CTPL_OPT][$obj[INST]]))){
+				foreach (self::$_tpl[CTPL_OPT][$obj[INST]] as $k => $v){
 					if ($ret[$k] > 0){
 						$ret[$k] += $v;
 					}
 				}
-			}		
+			}
 			
             self::setRate(POLY,$id,$ret[POLY]);
             self::setRate(BONE,$id,$ret[BONE]);
@@ -147,7 +149,7 @@ class Character{
 		return GeneralFunc::my_array_rand(self::$_rate[$type][$i]);
 	}
 	
-    //优先级变化 范围为 1-9 / 初始化时需设置0,使用::setRate()函数
+    // 优先级变化 范围为 1-9 / 初始化时需设置0,使用::setRate()函数
 	public static function modifyRate($organ,$id,$rate,$old = false){
 		if ($rate != 0){
 			if (false === $old){

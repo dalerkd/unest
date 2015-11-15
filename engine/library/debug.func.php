@@ -4,110 +4,94 @@ if(!defined('UNEST.ORG')) {
         exit('Access Denied');
 }
 
-class DebugFunc{
+class DebugFunc{	
 
-	//////////////////////////////////////////////////////
-	//
-	// 生成 血肉
-	// $usable : 可用范围
-	// $prev   : 上一个链表 index，无则为false;
-	// $type   : 调试用 ... 特殊标记 产生特殊血肉
-	private static function gen_code_4_debug_usable_array($usable,$prev,$type = '0x0cccccccc'){
+	private static function gen_code_4_debug_usable_array($usable,$next,$usable_id){
 		
-		$result = false;
-		$i = 0;    
+		OrganOptWrapper::job_begin();
 
+		$i = 0;
+		$pos = $next;
+		$gpr4memread = array();
 
-		if (!empty($usable[NORMAL_WRITE_ABLE])){
-			foreach ($usable[NORMAL_WRITE_ABLE] as $a => $b){
-				if (isset($b[32])){ //有32位的只处理32位即可
-					$result[CODE][$i][OPERATION] = 'MOV';
-					$result[CODE][$i][PARAMS][0] = Instruction::getRegByIdxBits(32,$a);
-					$result[CODE][$i][PARAMS][1] = $type;    				
-					$result[CODE][$i][P_TYPE][0] = 'r';
-					$result[CODE][$i][P_TYPE][1] = 'i';
-					$result[CODE][$i][P_BITS][0] = 32;
-					$result[CODE][$i][P_BITS][1] = 32;
-					$i ++;			
-				}else{
-					foreach ($b as $c => $d){				
-						$result[CODE][$i][OPERATION] = 'MOV';
-						$result[CODE][$i][PARAMS][0] = Instruction::getRegByIdxBits($c,$a);
-						$result[CODE][$i][PARAMS][1] = $type;    
-						$result[CODE][$i][P_TYPE][0] = 'r';
-						$result[CODE][$i][P_TYPE][1] = 'i';
-						$result[CODE][$i][P_BITS][0] = $c;
-						$result[CODE][$i][P_BITS][1] = $c;				
-						$i ++;				
-					}
+		// pay attention to the sort of do
+		if (!empty($usable[GPR_WRITE_ABLE])){
+			foreach ($usable[GPR_WRITE_ABLE] as $regIdx => $b){
+				if ('EIP' === $regIdx){continue;}
+				foreach ($b as $regBits => $true){					
+					$c_reg = Instruction::getRegByIdxBits($regBits,$regIdx);
+					$gpr4memread[$regBits] = $c_reg;					
 				}
 			}
 		}
-		//elseif (false !== $usable[STACK]){
-		//	$result[CODE][$i][OPERATION] = 'push';
-		//	$result[CODE][$i][PARAMS][0] = 'eax';
-		//	$i ++;
-		//	$result[CODE][$i][OPERATION] = 'mov';
-		//	$result[CODE][$i][PARAMS][0] = 'eax';
-		//	$result[CODE][$i][PARAMS][1] = $type;    				
-		//	$i ++;
-		//	$result[CODE][$i][OPERATION] = 'pop';
-		//	$result[CODE][$i][PARAMS][0] = 'eax';
-		//	$i ++;
-		//}
-
-		
-		if (isset($usable[MEM_OPT_ABLE])){
-			foreach ($usable[MEM_OPT_ABLE] as $a => $b){
-				$v = ValidMemAddr::get($b);
-				$z = $v[CODE];
-				if ($v[OPT] >= 2){
-					if ($v[BITS] == 32){
-						if (false === strpos($z,'_RELINFO_')){ //含重定位的内存地址，暂不处理
-							$result[CODE][$i][OPERATION] = 'MOV';
-							$result[CODE][$i][PARAMS][0] = $z;
-							$result[CODE][$i][PARAMS][1] = $type;       
-							$result[CODE][$i][P_TYPE][0] = 'm';
-							$result[CODE][$i][P_TYPE][1] = 'i';
-							$result[CODE][$i][P_BITS][0] = 32;
-							$result[CODE][$i][P_BITS][1] = 32;	 				
-							$i ++; 
-						}else{
-							
-						}
-					}
+		if (!empty($usable[MEM_WRITE_ABLE])){
+			foreach ($usable[MEM_WRITE_ABLE] as $memIdx){
+				$organ = array();
+				$organ[INST] = 'MOV';
+				$organ[OPERAND][1] = $memIdx;
+				$organ[OPERAND][2] = '0xcccccccc';
+				$organ[P_TYPE][1] = T_MEM;
+				$organ[P_TYPE][2] = T_IMM;
+				$pos = OrganOptWrapper::organ_insert($organ,$pos,$i,array('dbg',$usable_id));
+				$i ++;
+			}
+		}
+		if (!empty($usable[MEM_READ_ABLE])){
+			foreach ($usable[MEM_READ_ABLE] as $memIdx){
+				$t = OrgansOperator::getMemOperandArr($memIdx);
+				if (isset($gpr4memread[$t[OP_BITS]])){
+					$organ = array();
+					$organ[INST] = 'MOV';
+					$organ[OPERAND][1] = $gpr4memread[$t[OP_BITS]];
+					$organ[OPERAND][2] = $memIdx;
+					$organ[P_TYPE][1] = T_GPR;
+					$organ[P_TYPE][2] = T_MEM;
+					$pos = OrganOptWrapper::organ_insert($organ,$pos,$i,array('dbg',$usable_id));
+					$i ++;
+				}				
+			}
+		}
+		if (!empty($usable[GPR_WRITE_ABLE])){
+			foreach ($usable[GPR_WRITE_ABLE] as $regIdx => $b){
+				if ('EIP' === $regIdx){continue;}
+				foreach ($b as $regBits => $true){					
+					$c_reg = Instruction::getRegByIdxBits($regBits,$regIdx);
+					$organ = array();
+					$organ[INST] = 'MOV';
+					$organ[OPERAND][1] = $c_reg;
+					$organ[OPERAND][2] = '0xcccccccc';    				
+					$organ[P_TYPE][1] = T_GPR;
+					$organ[P_TYPE][2] = T_IMM;
+					$pos = OrganOptWrapper::organ_insert($organ,$pos,$i,array('dbg',$usable_id));
+					$i ++;
 				}
 			}
 		}
 
-		if (false !== $result){			
-			foreach ($result[CODE] as $b){
-				$c_id = OrgansOperator::newUnitNaked($prev,$b);
-				OrgansOperator::appendComment($c_id,'gen4debug01');
-			} 			
+		if (false === OrganOptWrapper::job_commit()){ // fail 
+			GeneralFunc::LogInsert('a job_commit() returns fail',WARNING);
 		}
 		return;
 	}
 
 	public static function debug_usable_array(){
-		$p_lp = false;
+		$objs = array();
+		$pos  = false;
 		$c_lp = OrgansOperator::getBeginUnit();
-
 		while ($c_lp){
-
-			$c_usable = OrgansOperator::getUsable($c_lp);
-
-			if ($c_usable){
-				if (isset($c_usable[P])){
-					self::gen_code_4_debug_usable_array($c_usable[P],$p_lp,'0xaaaaaaaa');
-				}
-				if (isset($c_usable[N])){
-					self::gen_code_4_debug_usable_array($c_usable[N],$c_lp,'0xbbbbbbbb');
-				}
-			}
-			$p_lp = $c_lp;
+			$c_usable = OrgansOperator::Get_Unit_Usable($c_lp,P);
+			var_dump($c_usable);
+			$objs[] = array($c_usable,$pos,$c_lp);
+			$pos = $c_lp;
 			$c_lp = OrgansOperator::next($c_lp);
 		}
+
+		foreach ($objs as $c){
+			self::gen_code_4_debug_usable_array($c[0],$c[1],$c[2]);
+		}
+
+		echo '<br><br><br><br><br><br><br><br><br>';
+		OrganOptWrapper::show();
 	}
 }
 

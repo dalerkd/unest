@@ -12,6 +12,11 @@ class Instruction{
 	private static $_register_total;  //$array = $_register[8] + $_register[9] + ...
 	private static $_register_index;  //$array['8'] = array ('index' => 'AL', 'index' => 'CL',  'EDX'=> 'DL',  'EBX' => 'BL'); ...
 	private static $_register_asort;  //$array = array ('AL' => 'index', ...
+	//*** prefix
+	private static $_prefix_legacy;
+	//*** imm
+	private static $_imm_max;
+	private static $_sbyte_bound;
 
 	//*** 其它数组
 	private static $_mem_effect_len_array;
@@ -25,11 +30,21 @@ class Instruction{
 	private static $_mem_opt;
 	private static $_alias_inst;
 	private static $_bits;
+	// gpr relationship
+	private static $_gpr_children;
+	private static $_gpr_parent;
 
 	private static $_pattern_regs; //全 通用寄存器 匹配
    
     // *** 指令集
 	private static $_instruction;
+	// *** all registers
+	private static $_all_registers;
+
+	// 寄存器判断
+	public static function isRegister($str){
+		return (isset(self::$_all_registers[$str]));
+	}
 
     // 创建 所有通用寄存器 通配字符串
 	private static function genRegPattern(){
@@ -60,7 +75,7 @@ class Instruction{
 		self::$_segment        = $segment;
 		//init general-registers Array
 		foreach ($general_register as $v){
-			$index = $v[32];
+			$index = $v[OPT_BITS];
 		    foreach ($v as $bits => $reg_name){
 				self::$_register[$bits][$reg_name] = $bits;
 				self::$_register_total[$reg_name]  = $bits;				
@@ -69,6 +84,12 @@ class Instruction{
 				    continue;
 				}
 				self::$_register_index[$bits][$index] = $reg_name;
+			}
+		}
+		self::$_gpr_children = $gpr_relation;
+		foreach (self::$_gpr_children as $parent => $childrenArr){
+			foreach ($childrenArr as $children){
+				self::$_gpr_parent[$children][] = $parent;
 			}
 		}
 		//***
@@ -84,6 +105,9 @@ class Instruction{
 		self::$_alias_inst             = $inst_alias;
 		self::$_bits                   = $bits_array;
 		self::$_stack_effects          = $stack_effects;
+		self::$_prefix_legacy          = $prefix_legacy;
+		self::$_imm_max                = $imm_max;
+		self::$_sbyte_bound			   = $sbyte_bound;
 
 		//***
 		require dirname(__FILE__)."/../instructions/intl.inc.php";
@@ -91,6 +115,44 @@ class Instruction{
 
 		//***
 		self::$_pattern_regs = self::genRegPattern();
+
+		require dirname(__FILE__)."/../instructions/insns.dat.php";
+		self::$_all_registers = $regs_dat_array;
+	}
+
+	// TODO : tmp test
+	public static function tester(){
+		require dirname(__FILE__)."/../instructions/inst.effects.inc.php";
+
+		// 测试1: $inst_effects_eflags <= self::$_instruction
+		foreach ($inst_effects_eflags as $inst => $value){
+			echo '<br>+++++++++++++++++++++<br>'.$inst.'<br>';			
+			if (isset(self::$_instruction[$inst])){
+				foreach ($value as $eflag => $opt){
+					$old_array = self::$_instruction[$inst];
+					if (isset($old_array['multi_op'])){
+						$old_array = $old_array['1'];
+					}
+					if (isset($old_array[$eflag])){
+						if ($opt === $old_array[$eflag]){
+
+						}else{
+							echo '<br>different opt: '.$eflag.' '.$opt;
+						}
+					}else{
+						echo '<br>no eflages: '.$eflag;
+					}
+				}
+			}else{
+				echo '<br>not instruction!<br>';
+			}
+		}
+		exit;
+
+
+		var_dump ($inst_effects_eflags);
+		var_dump (self::$_instruction);
+
 	}
 
 	// 位数统计
@@ -112,12 +174,19 @@ class Instruction{
 	public static function isPrefixInst($inst){
 	    return (isset(self::$_instruction[$inst]['isPrefix']));
 	}
+
+	// 
+	public static function getPrefixNameByHex($hex){
+		return isset(self::$_prefix_legacy[$hex])?self::$_prefix_legacy[$hex]:false;
+	}
+
     // 是否是数据定义指令
 	public static function isDataInst($inst){
 	    return (isset(self::$_instruction[$inst]['data']));
 	}
 	// 获取指令 数组 / $par 忽略参数个数 (肯定此inst无多参，如prefix;数据定义 或 仅需判断inst是否有效)
-	public static function getInstructionOpt($inst,$par=false){
+	//               / $sflag 'OTHER_REG_STATUS_FLAG_UNDEF' (intl.inc.php)
+	public static function getInstructionOpt($inst,$par=false,$sflag=false){
 		$ret = false;
 	    if (isset(self::$_instruction[$inst])){
 		    if (isset(self::$_instruction[$inst]['multi_op'])){
@@ -130,7 +199,24 @@ class Instruction{
 				$ret = self::$_instruction[$inst];
 			}
 		}
+		if (($sflag) and (isset($ret['OTHER_REG_STATUS_FLAG_UNDEF']))){
+			unset ($ret['OTHER_REG_STATUS_FLAG_UNDEF']);
+			foreach (self::$_eflags as $reg => $class){
+				if (1 === $class){
+					$ret[$reg] = W;
+				}
+			}
+		}
 		return $ret;
+	}
+
+	// 获取当前位数
+	public static function getCurrentBits($resize = false){
+		if ($resize){
+			if (32 == OPT_BITS){return 16;}
+			if (16 == OPT_BITS){return 32;}
+		}
+		return OPT_BITS;
 	}
     
 	// 返回 opt 涉及写操作 的 通用(标志)寄存器 数组 $ret[FLAG]   = array('','')
@@ -239,6 +325,11 @@ class Instruction{
 		return false;
 	}
 
+	//
+	public static function isSegReg($str){
+		return isset(self::$_segment[$str]);
+	}
+
 	// 获取指令别名(如果有的话)
 	public static function getInstAlias($inst){
 	    return (isset(self::$_alias_inst[$inst]))?self::$_alias_inst[$inst]:$inst;
@@ -299,6 +390,11 @@ class Instruction{
 	public static function isEflag($var){
 	    return (isset(self::$_eflags[$var]));
 	}
+
+	public static function isStackReg($reg){
+		if (STACK_POINTER_REG === Instruction::getGeneralRegIndex($reg)){return true;}
+		else{return false;}
+	}
     
 	//type 1: status flag  2:control flag  3:system flag(不全)
 	public static function getEflags($type = false){
@@ -329,22 +425,49 @@ class Instruction{
 		}else{
 			return false;
 		}
-	}  
+	}
+	// get bits of gpr's valid children 
+	public static function getGprChildren($regIdx,$bits){
+		$ret = array();
+		if (isset(self::$_gpr_children[$bits])){
+			foreach (self::$_gpr_children[$bits] as $c_bits){
+				if (false !== self::getRegByIdxBits($c_bits,$regIdx)){
+					$ret[] = $c_bits;
+				}
+			}
+		}
+		return $ret;
+	}
+	// get bits of gpr's valid parents 
+	public static function getGprParents($regIdx,$bits){
+		$ret = array();
+		if (isset(self::$_gpr_parent[$bits])){
+			foreach (self::$_gpr_parent[$bits] as $c_bits){
+				if (false !== self::getRegByIdxBits($c_bits,$regIdx)){
+					$ret[] = $c_bits;
+				}
+			}
+		}
+		return $ret;
+	}
     // 指定 寄存器 获取 对应的 通用寄存器 索引名
 	public static function getGeneralRegIndex($reg){
 		return (isset(self::$_register_asort[$reg]))?(self::$_register_asort[$reg]):false;
 	}
-
-    // 指定 寄存器 获取 对应的 位数
-	public static function getGeneralRegBits($reg){
-		return (isset(self::$_register_total[$reg]))?(self::$_register_total[$reg]):false;
+    // 指定 寄存器 获取 对应的 位数 if ($detectHigh) 高位8reg返回9,否则发回8
+	public static function getGeneralRegBits($reg,$detectHigh = false){
+		if (isset(self::$_register_total[$reg])){
+			$b = self::$_register_total[$reg];
+			if ((!$detectHigh) and (9 === $b)){$b = 8;}			
+		}else{
+			return false;
+		}
+		return $b;
 	}
-
 	// 指定 寄存器索引 + 位数  获取 对应的 寄存器
 	public static function getRegByIdxBits($bits,$reg){
 	    return (isset(self::$_register_index[$bits][$reg]))?(self::$_register_index[$bits][$reg]):false;
 	}
-
 	// 指定 寄存器索引   获取 对应 的 寄存器 数组
 	public static function getRegsByIdx($idx){
 		$ret = false;
@@ -354,14 +477,90 @@ class Instruction{
 			}
 		}
 		return $ret;
-	}
-	
+	}	
 	//指定 寄存器位数  获取 对应 的 寄存器 数组
 	public static function getRegsByBits($bits){
+		var_dump(self::$_register_index[$bits]);
 		return (isset(self::$_register_index[$bits]))?(self::$_register_index[$bits]):false;
 	}
 
+	// hex imm -> dec imm (根据bits,neg 一律转为无符号类型)
+	public static function hexImm2decImm($hex,$neg,$bits){
+		$value = self::bchexdec($hex);
+		if ($neg){
+			$value = self::bounceInBits('-'.$value,$bits);
+		}else{
+			$value = self::bounceInBits($value,$bits);
+		}
+		return $value;
+	}
+	// is sbyte ?
+	public static function isSByte($dec,$bits){
+		if (0 >= bccomp($dec,'127')){return true;}
+		if (isset(self::$_sbyte_bound[$bits])){
+			if (0 < bccomp($dec,self::$_sbyte_bound[$bits])){return true;}
+		}
+		return false;
+	}
+	// bounce in bits
+	private static function bounceInBits($dec,$bits){
+		if ('-' === $dec[0]){
+			$neg = true;
+			$dec = trim(substr($dec,1));
+		}else{
+			$neg = false;
+		}
+		if (isset(self::$_imm_max[$bits])){
+			if (0<bccomp($dec,self::$_imm_max[$bits])){ // 超过max,取模
+				$dec = bcmod($dec, self::$_imm_max[$bits]);
+			}
+			if ($neg){ // 负数,取补
+				$dec = bcadd(self::$_imm_max[$bits],'-'.$dec);
+			}
+		}else{
+			GeneralFunc::LogInsert('Illegal Bits to Bounce bits().',ERROR);
+		}
+		return $dec;
+	}
+	// bcmath : hex -> dec
+	private static function bchexdec($hex) {
+        if(strlen($hex) == 1) {
+            return hexdec($hex);
+        }else {
+            $remain = substr($hex, 0, -1);
+            $last = substr($hex, -1);
+            return bcadd(bcmul(16, self::bchexdec($remain)), hexdec($last));
+        }
+    }
 
+	// 二则运算(TODO:以后增加乘除法) (十进制only),return unsigned ($bits)
+	public static function my_calculate($str,$bits){
+		$value = '0';
+		$opt   = '+';
+		$array = preg_split('/(\+|-)/',$str,-1,PREG_SPLIT_NO_EMPTY|PREG_SPLIT_DELIM_CAPTURE);
+		foreach ($array as $c){
+			$c = trim($c);		
+			if (0 == strlen($c)){continue;}
+			if ('+' === $c){
+				continue;
+			}elseif ('-' === $c){
+				if ('+' === $opt){
+					$opt = '-';
+				}elseif ('-' === $opt){
+					$opt = '+';
+				}
+			}else{
+				if (!is_numeric($c)){
+					GeneralFunc::LogInsert('try to calcuate non-numeric in my_calculate() : '.$str,ERROR);
+					return 0;
+				}
+				$value = bcadd($value,$opt.$c);
+				$value = self::bounceInBits($value,$bits);
+				$opt = '+';
+			}
+		}
+		return $value;
+	}
 }
 
 ?>

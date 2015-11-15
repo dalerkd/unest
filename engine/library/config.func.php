@@ -43,7 +43,10 @@ class CfgParser{
 	public static function get_preprocess_config($key = false){
 	    return self::get(self::$_preprocess_config,$key);
 	}
-
+	//////////////////////////////////////////////
+	public static function init_rdy($rdy){
+		self::$_rdy = $rdy;
+	}
     //////////////////////////////////////////////
 	//
 	//支持命令行/Get/Post 提交 的参数
@@ -52,7 +55,6 @@ class CfgParser{
 	//
 	//type: (0) ready  (1) generate 与 self::init_params 有关
 	public static function get_params($argv,$type=0){
-		global $language;
 
 		$ret = false;
 	 
@@ -65,24 +67,15 @@ class CfgParser{
 
 		if (!isset($ret['cnf'])){
 			GeneralFunc::LogInsert('need param cnf');
-		}else{
-			if (1 == $type){
-			    $cf = @file_get_contents($ret['base'].'/'.$ret['rdy']);
-
-	            if ($cf == false){
-					GeneralFunc::LogInsert('fail to open ready file: '.$ret['base'].'/'.$ret['rdy']);
-				}else{
-				    self::$_rdy = unserialize($cf);//反序列化，并赋值  
-				}
-			}
+		}else{		
             
 			if (0 == $type){
 				if (false === self::get_usr_config(false,$ret['base'].'/'.$ret['cnf'],true)){ //读取配置文件失败，不做任何处理？放弃
-					GeneralFunc::LogInsert($language['without_cfg_file']);        
+					GeneralFunc::LogInsert('fail to open configure file');        
 				}
 			}elseif (1 == $type){
 			    if (false === self::get_usr_config(self::$_rdy['sec_name'],$ret['base'].'/'.$ret['cnf'],false)){ //读取配置文件失败，不做任何处理？放弃
-					GeneralFunc::LogInsert($language['without_cfg_file']);        
+					GeneralFunc::LogInsert('fail to open configure file');        
 				}
 			}
 
@@ -92,11 +85,6 @@ class CfgParser{
 			if (1 == $type){  //setvalue_dynamic 动态调整 原设置值
 	            self::affect_setvalue_dynamic(self::$_rdy['sec_name']);	
 			}
-            
-			//var_dump (self::$_user_params);
-			//var_dump (self::$_user_cnf);
-		    //var_dump (self::$_preprocess_config);
-			//exit;
 		}
 	}
 
@@ -120,13 +108,6 @@ class CfgParser{
 		if (0 == $type){ // ready 阶段
 			if (!isset(self::$_user_params['path'])){
 				GeneralFunc::LogInsert('need param path');
-			}
-			if ('bin' === self::$_user_params['type']){
-				 self::$_user_params['type'] = 'BIN';
-			}elseif ('coff' ===  self::$_user_params['type']){	
-				 self::$_user_params['type'] = 'COFF';
-			}else{
-				GeneralFunc::LogInsert('need param type');
 			}
 			if (!isset(self::$_user_params['output'])){
 				GeneralFunc::LogInsert('need param output');
@@ -174,11 +155,9 @@ class CfgParser{
     ////////////////////////////////////////////////////////////////////////////////
 	//比较 相对 ready 阶段，$_preprocess_sec_name 是否有新增
     public static function CmpPreprocess_sec($c_array){
-		global $language;
-
 	    foreach ($c_array as $a => $b){
 		    if (!isset(self::$_preprocess_sec_name[$a])){
-			    GeneralFunc::LogInsert($language['new_sec_increase_rdy'].$a);
+			    GeneralFunc::LogInsert('new section be increased (in config file) after preprocessed: '.$a);
 			}
 		}
 	}
@@ -197,9 +176,6 @@ class CfgParser{
 	//根据用户configure文件生成 数组(按节表)
 	//
 	private static function usr_config_parser($buffer,$preprocess,&$all_configure_array,&$section_array,&$global_array,&$i){
-
-		global $language;
-
 
 		$in_section = false;  //正在处理一个设置段(true),无设置段在处理(false)
 		$c_name     = false;  //当前段名
@@ -222,7 +198,7 @@ class CfgParser{
 					continue;
 				}elseif ('==PreprocessConfig==' === $a){
 					if (false !== self::$_preprocess_config){  //预处理 设置 不止 一个段
-						GeneralFunc::LogInsert($language['dup_preprocessconfig']);
+						GeneralFunc::LogInsert('there are more than one preprocess section in configure file');
 						return false;
 					}
 					$in_section = 3; 
@@ -233,7 +209,7 @@ class CfgParser{
 					if (false !== $c_name){
 						$all_configure_array[$i] = $c_ret;
 						if (isset($section_array[$c_name])){
-							GeneralFunc::LogInsert($language['dup_section'].$c_name);
+							GeneralFunc::LogInsert('dup section name in configure file : '.$c_name);
 							return false;
 						}
 						$section_array[$c_name] = $i;
@@ -282,16 +258,16 @@ class CfgParser{
 								if (false === $c_name){
 									$c_name = $value;								
 								}else{ //多个 sec name 设置
-									GeneralFunc::LogInsert($language['double_usr_cfg_secname'].' '.$line.' : '.$a,2);
+									GeneralFunc::LogInsert('can not set section name more than one, line '.$line.' : '.$a,2);
 								}
 								continue;
 							}else{
 								$tmp = self::check_cnf_value ($name,$value,$c_ret);
 								if (1 === $tmp){
-									GeneralFunc::LogInsert($language['unknown_usr_cfg_name'].' '.$line.' : '.$a,2);
+									GeneralFunc::LogInsert('unknown key name, line '.$line.' : '.$a,2);
 								}elseif (2 === $tmp){
 									// 值 类型非法
-									GeneralFunc::LogInsert($language['dismatch_usr_cfg_value'].' '.$line.' : '.$a,2);
+									GeneralFunc::LogInsert('mismatch in value type, line '.$line.' : '.$a,2);
 								}
 								continue;				
 							}
@@ -299,7 +275,7 @@ class CfgParser{
 					}
 				}
 			}
-			GeneralFunc::LogInsert($language['unkown_usr_cfg_line'].' '.$line.' : '.$a,3);
+			GeneralFunc::LogInsert('configure file fail to be parsed, line '.$line.' : '.$a,3);
 		}
 
 	}
@@ -311,9 +287,6 @@ class CfgParser{
 	//
 
 	public static function get_usr_config($sec_name,$filename,$preprocess = false){
-
-		global $language;
-
 
 		$buffer = false;
 		$handle = @fopen("$filename", "r");
@@ -358,7 +331,7 @@ class CfgParser{
 					foreach ($section_array as $c_name => $v){
 						if (!isset($sec_name[$c_name])){
 							unset ($all_configure_array[$v]);
-							GeneralFunc::LogInsert($language['unknown_cfg_sec_name'].$c_name,2);
+							GeneralFunc::LogInsert('ignored unknown section name in configure file : '.$c_name,2);
 						}
 					}
 
@@ -369,7 +342,9 @@ class CfgParser{
 					if (is_array($sec_name)){
 						foreach ($sec_name as $c_name => $v){
 							$i = $section_array[$c_name];
-							self::$_user_config[$c_name]            = $all_configure_array[$i]['unprotect'];
+							if (isset($all_configure_array[$i]['unprotect'])){
+								self::$_user_config[$c_name]            = $all_configure_array[$i]['unprotect'];
+							}
 							if (isset($all_configure_array[$i]['protect'])){
 								self::$_user_config[$c_name]['protect'] = $all_configure_array[$i]['protect'];
 							}
@@ -449,8 +424,9 @@ class CfgParser{
 			}elseif (Instruction::isEflag($value)){
 				$c_ret['unprotect'][FLAG][$value] = 1;
 				return true;
-			}elseif (Instruction::getRegByIdxBits(32,$value)){
-				$c_ret['unprotect'][NORMAL][$value]['32'] = 1;
+			}elseif ($tmp_bits = Instruction::getGeneralRegBits($value,true)){
+				$regIdx = Instruction::getGeneralRegIndex($value);
+				$c_ret['unprotect'][NORMAL][$regIdx][$tmp_bits] = 1;
 				return true;
 			}								 
 		}elseif ('@protect' === $name){
@@ -552,8 +528,6 @@ class CfgParser{
 	//
 	private static function affect_setvalue_dynamic($sec_name){
 
-		global $language;
-
         if (isset(self::$_user_params['sd'])){
 			$setvalue_dynamic = self::$_user_params['sd'];
 
@@ -565,18 +539,18 @@ class CfgParser{
 							if (true === self::$_user_cnf[$a]['setvalue_dynamic'][$key]){
 								$tmp = self::check_cnf_value('@'.$key,$new_value,self::$_user_cnf[$a]);
 								if (1 === $tmp){ //key name unknown
-									GeneralFunc::LogInsert($language['setvalue_unknown_key'].'['.$name.']['.$key.'] = '.$new_value,2);
+									GeneralFunc::LogInsert('unknown setvalue name : '.'['.$name.']['.$key.'] = '.$new_value,2);
 								}elseif (2 === $tmp){ //value mismatch
-									GeneralFunc::LogInsert($language['setvalue_mismatch_value'].'['.$name.']['.$key.'] = '.$new_value,2);
+									GeneralFunc::LogInsert('mismatch in setvalue : '.'['.$name.']['.$key.'] = '.$new_value,2);
 								}						
 							}else{ //尝试向未开放动态revalue的段中 动态覆写					
-								GeneralFunc::LogInsert($language['setvalue_with_off'].'['.$name.']['.$key.']',2);
+								GeneralFunc::LogInsert('refuse setvalue in section : '.'['.$name.']['.$key.']',2);
 								break;
 							}
 						}
 					}
 				}else{ //传送了一个未定义段名的revalue
-					GeneralFunc::LogInsert($language['setvalue_illegal_sec'].$name,2);
+					GeneralFunc::LogInsert('unknown section name to setvalue : '.$name,2);
 				}
 			}
 		}
@@ -588,34 +562,21 @@ class CfgParser{
 		
 		$c_define = self::$_user_cnf[$sec]; 
 
-		$c = OrgansOperator::getBeginUnit();
-		while ($c){
-			if (isset($c_define['protect']['thread_memory'])){
-				//TODO: 此处禁用后有机会恢复ReadyFunc::scan_affiliate_usable()中被禁用的与内存地址相关的寄存器
-				OrgansOperator::removeWritableMem($c,P);
-				OrgansOperator::removeWritableMem($c,N);
+		if (isset($c_define['unprotect'][FLAG])){
+			OrgansOperator::Reset_Access_By_Manual('eflag',$c_define['unprotect'][FLAG]);
+		}
+		if (isset($c_define['unprotect'][NORMAL])){
+			OrgansOperator::Reset_Access_By_Manual('gpr',$c_define['unprotect'][NORMAL]);
+		}
+		if (isset($c_define['stack_usable'])){
+			if (true === $c_define['stack_usable']){ // TODO: stack point be defined 'ESP'
+				$stack_pointers =  OrgansOperator::getStackPointArray();
+				OrgansOperator::Reset_Access_By_Manual('gpr_forbid',array(STACK_POINTER_REG));
+				OrgansOperator::Reset_Access_By_Manual('stack',array());
 			}
-			if (isset($c_define['unprotect'][FLAG])){
-				foreach ($c_define['unprotect'][FLAG] as $z => $y){
-					OrgansOperator::addUsableFlag($c,P,$z);
-					OrgansOperator::addUsableFlag($c,N,$z);
-				}
-			}
-			//通用寄存器，方便起见，forbid显式禁止 以寄存器为单位，不细分到位
-			if (isset($c_define['unprotect'][NORMAL])){
-				foreach ($c_define['unprotect'][NORMAL] as $z => $y){
-					OrgansOperator::addUsableReg($c,P,$z,false);
-					OrgansOperator::addUsableReg($c,N,$z,false);					
-				}
-			}
-			if (isset($c_define['stack_usable'])){
-				if (true === $c_define['stack_usable']){   //设置所有栈有效 and 清除所有单位可用ESP,  见./readme/readme.config.txt
-					OrgansOperator::removeStackRegUsable($c,P);
-					OrgansOperator::removeStackRegUsable($c,N);
-					OrgansOperator::setStackValid($c);
-				}
-			}
-			$c = OrgansOperator::next($c);
+		}
+		if (isset($c_define['protect']['thread_memory'])){
+			OrgansOperator::Reset_Access_By_Manual('mem_write_forbid',array());
 		}
 	}
 

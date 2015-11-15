@@ -1,9 +1,5 @@
 <?php
 
-if(!defined('UNEST.ORG')) {
-        exit('Access Denied');
-}
-
 // 捕获退出(输出log日志)
 function shutdown_except(){
     global $complete_finished;
@@ -29,6 +25,15 @@ class GeneralFunc{
 	private static $_error   = array();
 	private static $_warning = array();
 	private static $_notice  = array();
+	// Dependencies checker
+	public static function DependenciesChecker(){
+		if (!function_exists('bcadd')){
+			self::LogInsert('Dependencies missing: bcmath');
+		}
+		if (phpversion() < 5.4){
+			self::LogInsert('Php version too low');
+		}
+	}
 	// 写记录日志 $type 1: error  2:warning  3:notice
 	public static function LogInsert($log,$type=1){
 		if (1 === $type){
@@ -83,6 +88,7 @@ class GeneralFunc{
 		return $total;
 		/**************************************/
 	}	
+	// TODO: Deprecated!
 	// 获取文件行数(失败返回false,成功返回行数)
 	// TODO：超长汇编指令(换行) 未考虑
 	public static function get_file_line($filename){
@@ -197,6 +203,14 @@ class GeneralFunc{
 	// 获取 链表单位编号 获取 CODE 数组
 	// public static function getCode_from_DlinkedList($ListID){	
 	//     //HIRO return OrgansOperator::getCode($ListID);
-	// } 	
+	// } 
 
+	// 识别 数组是否相同
+	public static function is_same_array($array1,$array2){
+		if (count($array1) === count($array2)){
+			$tmp = array_diff($array1, $array2);
+			return empty($tmp);
+		}
+		return false;
+	}
 }

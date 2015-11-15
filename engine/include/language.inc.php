@@ -34,10 +34,9 @@ $language = array(
 	'obj_filename_del_fail'   => 'file is corrupted',//'目标文件可能被占用，操作失败',
 	'fail_bone_array'         => 'fail to allocate code,architecture config wrong,number:',//'分配代码至混淆架构位置时错误，可能是混淆架构设置错误，编号:',
 	'illegal_rel_type'        => 'undefined reloc type,give up',//'重定位类型与应用不符,放弃对此节表处理',
-	'poly_repo_null'          => 'undefined poly model number: ',//'多态模板编号未定义：',
+	// 'poly_repo_null'          => 'undefined poly model number: ',//'多态模板编号未定义：',
 	'illega_mem_param'        => 'invalid memory address format: ',//'错误的内存地址格式: ',
-	'without_cfg_file'        => 'fail to open configure file',//'打开配置文件失败',
-	'unkown_usr_cfg_line'     => 'configure file fail to be parsed, line',//'配置文件内容错误或无法被正确解析，行号',
+	
 	'section_without_garble'  => ',strength was set as 0,give up',//'，处理强度为0，不做任何处理。',
 	'unkown_output_type'      => 'unkown file format',//'未知的格式定义: ',
 	'too_big_input_01'        => 'The code line number (',
@@ -58,13 +57,6 @@ $language = array(
 	'illegal_dynamci_insert_value' => 'illegal value of dynamic insert: ',
 	'toobig_dynamci_insert_value'  => 'dynamic insert bits bigger than original : ',
 	
-	'dup_preprocessconfig'    => 'there are more than one preprocess section in configure file',//预处理config段超过一个
-	'dup_section'             => 'dup section name in configure file : ',
-	'unknown_cfg_sec_name'     => 'ignored unknown section name in configure file : ',
-	'unknown_usr_cfg_name'     => 'unknown key name, line',       //用户设置 名 未知
-	'dismatch_usr_cfg_value'   => 'mismatch in value type, line', //用户设置 值 不符
-	'double_usr_cfg_secname'   => 'can not set section name more than one, line',
-
 	'without_act_sec'          => 'no obj section has been set',
 
     //debug 
@@ -72,10 +64,6 @@ $language = array(
 	'invalid_debug_value'     => 'invalid debug value was defined: ',
 
     //revalue
-	'setvalue_with_off'         => 'refuse setvalue in section : ',
-	'setvalue_illegal_sec'      => 'unknown section name to setvalue : ',
-	'setvalue_unknown_key'      => 'unknown setvalue name : ',
-	'setvalue_mismatch_value'   => 'mismatch in setvalue : ',	
 
 	'max_output_less_org'     => ',output_opcode_max value less than origin size', //设置的最大输出字节数 小于 原代码字节数
     'max_output_equal_org'    => ',output_opcode_max value equal with origin size, give up', //设置的最大输出字节数 等于 原代码字节数
@@ -88,10 +76,6 @@ $language = array(
     
 	//ready
 	'ignore_ready_sec'        => 'ignore no exists section name (in config file): ',
-
-	//rdy
-	'new_sec_increase_rdy'    => 'new section be increased (in config file) after preprocessed: ',
-
 
 );
 ?>

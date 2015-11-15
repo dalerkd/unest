@@ -36,6 +36,10 @@ $inst_alias = array(
     'RETN' => 'RET',
 );
 
+// Imm 定义
+$imm_max = array(16 => '65536',32 => '4294967296', 64 => '18446744073709551616');
+$sbyte_bound = array(16 => '65407',32 => '4294967167',);
+
 // 栈影响指令
 $stack_effects = array(
 	'PUSH'   => array( 1, STACK_EFFECT_1),
@@ -51,6 +55,27 @@ $stack_effects = array(
 	'PUSHFQ' => array( 1, 64 / DWORD_BITS),
 	'POPFQ'  => array(-1, 64 / DWORD_BITS),
 );
+
+// prefix
+$prefix_legacy = array( // array('name','group')
+	// resize
+	'66' => array('o_resize',PREFIX_GROUP_3),
+	'67' => array('a_resize',PREFIX_GROUP_4),
+    // segment override prefix：改变 memory 操作数段选择子，包括：
+	'2E' => array('CS',PREFIX_GROUP_2),
+	'3E' => array('DS',PREFIX_GROUP_2),
+	'26' => array('ES',PREFIX_GROUP_2),
+	'64' => array('FS',PREFIX_GROUP_2),
+	'65' => array('GS',PREFIX_GROUP_2),
+	'36' => array('SS',PREFIX_GROUP_2),
+	// rep/repz,repnz
+    'F3' => array('REP',PREFIX_GROUP_1),
+    'F2' => array('REPNZ',PREFIX_GROUP_1),
+    'F0' => array('LOCK',PREFIX_GROUP_1),
+    // FPU
+    '9B' => array('WAIT',PREFIX_GROUP_0),
+);
+
 // 定长跳转有range限制的
 $range_limit_static_jmp = array(
     'LOOP'   => 127,
@@ -128,9 +153,9 @@ $my_cc = array(
 	'JPO' => 'Jcc',
 	'JS'  => 'Jcc',
 	'JZ'  => 'Jcc',
-	'JCXZ'   => 'Jcc',
-	'JECXZ'  => 'Jcc',
-	'JRCXZ'  => 'Jcc',
+	// 'JCXZ'   => 'Jcc',
+	// 'JECXZ'  => 'Jcc',
+	// 'JRCXZ'  => 'Jcc',
 
     'CMOVA'  => 'CMOVcc',
 	'CMOVAE' => 'CMOVcc',
@@ -302,6 +327,7 @@ $eip_instruction = array(
 	'JMP'       => 1,
 	'CALL'      => 1,	 
 );
+// TODO: decrapied
 // 所有 隐含 内存操作的指令
 $mem_opt = array( 
     'MOVSB' => array(

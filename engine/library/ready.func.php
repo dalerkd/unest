@@ -1370,12 +1370,12 @@ class ReadyFunc{
 
 
 	///////////////////////////////////////////
-	//为所有eip跳转指令(重定位的都设跳转目标为下一指令) 定位 以后添加 Label 的位置信息
+	// 为所有eip跳转指令(重定位的都设跳转目标为下一指令) 定位 以后添加 Label 的位置信息
 	//                  跳转指令 后的 dword 去掉
-	//替换  eip跳转指令 后的常数为 Label
-	//
-	//btw: 过滤 每个段中 末尾用来填充 对齐 的 nop
-	//
+	// 替换  eip跳转指令 后的常数为 Label
+	
+	// btw: 过滤 每个段中 末尾用来填充 对齐 的 nop
+	
 	public static function eip_label_replacer($AsmLastSec,&$solid_jmp_array,&$solid_jmp_to,&$myTables,&$AsmResultArray,$LineNum_Code2Reloc,$language){
 		//后面 跟 跳转 目的 标号的 跳转指令
 
@@ -1486,7 +1486,7 @@ class ReadyFunc{
 			}
 			foreach ($AsmResultArray[$a] as $c => $d){
 				/****************判断重定位表是否符合规范，否则放弃对当前节表的处理*****************************/
-				if (isset($RelocArray[$a][$lp_reloc])){
+				if (isset($RelocArray[$a][$lp_reloc])){					
 					if  (($RelocArray[$a][$lp_reloc]['Type'] != 6) && ($RelocArray[$a][$lp_reloc]['Type'] != 20)){
 						//目前只处理 ： IMAGE_REL_I386_DIR32 0x0006 重定位目标的32 位VA
 						//              IMAGE_REL_I386_REL32 0x0014 重定位目标的32 位相对偏移。用于支持x86 的相对分支和CALL 指令。
@@ -1532,15 +1532,16 @@ class ReadyFunc{
 								echo "<br> $c [".$d['rva']."]{".$d['len']."} : $reloc_bin ".$d['asm'];
 								echo "<br><<<----------------------------";
 							}
-							if (isset($LineNum_Code2Reloc[$a][$c])){ //一条指令 对应 多个重定位，放弃处理
-								GeneralFunc::LogInsert($language['section_name']." ".$myTables['CodeSectionArray'][$a]['name'].$language['section_number']." $a ".$language['reloc_rva']." ".$RelocArray[$a][$lp_reloc]['VirtualAddress']." ".$language['one_asm_more_reloc'],2);
-								unset ($myTables['CodeSectionArray'][$a]);
-								break;
-							} 						
+							if (!isset($LineNum_Code2Reloc[$a][$c][$lp_reloc])){
+								$LineNum_Code2Reloc[$a][$c][$lp_reloc]['pos'] = 0;
+								$LineNum_Code2Reloc[$a][$c][$lp_reloc]['contents'][RELOC_VIRTUALADDRESS] = $RelocArray[$a][$lp_reloc]['VirtualAddress'];
+								$LineNum_Code2Reloc[$a][$c][$lp_reloc]['contents'][RELOC_SYMBOLTABLEINDEX] = $RelocArray[$a][$lp_reloc]['SymbolTableIndex'];
+								$LineNum_Code2Reloc[$a][$c][$lp_reloc]['contents'][RELOC_TYPE] = $RelocArray[$a][$lp_reloc]['Type'];
+							}					
 							if (($d['rva'] + $d['len']) == $RelocArray[$a][$lp_reloc]['VirtualAddress'] + 4){ //重定位在最后
-								$LineNum_Code2Reloc[$a][$c][$lp_reloc] = 1;						
+								$LineNum_Code2Reloc[$a][$c][$lp_reloc]['pos'] |= 1; // immediate or displacement(without imm)			
 							}else{                                                                            //重定位不在最后，后面还有一个imm	
-								$LineNum_Code2Reloc[$a][$c][$lp_reloc] = 2;
+								$LineNum_Code2Reloc[$a][$c][$lp_reloc]['pos'] |= 2; // displacement
 							}
 							$lp_reloc ++;
 						}
@@ -1567,10 +1568,6 @@ class ReadyFunc{
 				}
 			}
 		}
-
-
-
-		//var_dump ($RelocArray);
 		return;	
 
 	}
